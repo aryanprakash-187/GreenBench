@@ -85,9 +85,12 @@ export async function POST(req: NextRequest) {
   const url = new URL(req.url);
   const wantsDownload = url.searchParams.get('download') === '1';
 
+  // HTTP header values must be ISO-8859-1 (RFC 7230). A name like "Müller"
+  // would raise `TypeError: Invalid character in header content` in Node /
+  // Workers — percent-encode so any non-ASCII operator name is safe to echo.
   const headers: Record<string, string> = {
     'Content-Type': 'text/calendar; charset=utf-8',
-    'X-Greenbench-Person': body.person_name,
+    'X-Greenbench-Person': encodeURIComponent(body.person_name),
     'X-Greenbench-Has-Plan-Items': hasAnything ? '1' : '0',
   };
   if (wantsDownload) {

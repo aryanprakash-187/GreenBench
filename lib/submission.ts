@@ -35,7 +35,16 @@ export type SubmissionPersonInput = {
    *  can pass original VEVENTs through unchanged. May be null when the user
    *  didn't upload a calendar. */
   schedule_ics_text: string | null;
-  protocols: SubmissionProtocolInput[];
+  /** The matched + enriched protocol for this person.
+   *
+   *  The form deliberately collects ONE protocol upload per person (see
+   *  `SubmissionPersonInput` in `components/HomeForm.tsx`). The shape used to
+   *  be an array, which was a footgun: the rest of the pipeline (engine API,
+   *  exporter) would happily accept multiple, but no UI ever produced more
+   *  than one entry. Narrowing to a single optional value here keeps the
+   *  contract honest. If multi-protocol upload ever ships, switch this back
+   *  to an array AND add the multi-upload control. */
+  protocol: SubmissionProtocolInput | null;
 };
 
 /* ---------- Top-level submission ----------

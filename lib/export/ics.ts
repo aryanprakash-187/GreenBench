@@ -199,15 +199,15 @@ function buildSharedCoordinationVevent(args: {
   let location: string;
 
   if (coord.type === 'shared_reagent_prep') {
-    // Sit the shared prep block immediately before the first user.
-    end = new Date(earliestStart);
-    start = new Date(end.getTime() - SHARED_PREP_DEFAULT_DURATION_MIN * 60 * 1000);
-    // Pull back another `lead` worth so it visually stands apart, but never
-    // before the previous hour (otherwise multiple shared preps stack on top).
-    const lead = SHARED_PREP_LEAD_MIN;
-    const candidateStart = new Date(start.getTime() - lead * 60 * 1000);
-    start = candidateStart;
-    end = new Date(candidateStart.getTime() + SHARED_PREP_DEFAULT_DURATION_MIN * 60 * 1000);
+    // Place the shared prep block 50 min before the earliest participant's
+    // task: SHARED_PREP_LEAD_MIN of breathing room + SHARED_PREP_DEFAULT_DURATION_MIN
+    // for the actual prep itself. This keeps the prep visually distinct from
+    // back-to-back tasks and finishes 30 min before any participant starts.
+    start = new Date(
+      earliestStart -
+        (SHARED_PREP_LEAD_MIN + SHARED_PREP_DEFAULT_DURATION_MIN) * 60 * 1000
+    );
+    end = new Date(start.getTime() + SHARED_PREP_DEFAULT_DURATION_MIN * 60 * 1000);
     summary = `Green Bench · Shared prep · ${humanize(coord.overlap_group ?? 'reagent')}`;
     location = 'Green Bench prep bench';
   } else {
@@ -313,15 +313,45 @@ function escapeText(s: string): string {
     .replace(/;/g, '\\;');
 }
 
-/** RFC 5545 §3.1: fold lines longer than 75 octets, continuation lines start with a space. */
+/** RFC 5545 §3.1: fold lines longer than 75 octets, continuation lines start
+ *  with a space. We measure UTF-8 byte length (not JS string length) so a
+ *  multi-byte character (em-dash, accented operator name, future emoji)
+ *  doesn't silently push a line past the 75-octet ceiling. We also slice on
+ *  byte boundaries so continuation lines stay valid UTF-8. */
 function foldLine(line: string): string[] {
-  const MAX = 75;
-  if (line.length <= MAX) return [line];
-  const out: string[] = [line.slice(0, MAX)];
-  let i = MAX;
-  while (i < line.length) {
-    out.push(' ' + line.slice(i, i + MAX - 1));
-    i += MAX - 1;
+  // Continuation lines start with a SP, which itself counts toward the 75
+  // octets. So the first chunk gets MAX bytes and each subsequent chunk gets
+  // MAX - 1 bytes of payload (after the leading SP).
+  const FIRST_MAX = 75;
+  const CONT_MAX = 74;
+
+  const buf = Buffer.from(line, 'utf8');
+  if (buf.length <= FIRST_MAX) return [line];
+
+  const out: string[] = [];
+  let offset = 0;
+  let max = FIRST_MAX;
+  let prefix = '';
+  while (offset < buf.length) {
+    let take = Math.min(max, buf.length - offset);
+    // Walk back so we don't slice through the middle of a UTF-8 codepoint.
+    // Continuation bytes are 10xxxxxx (0x80–0xBF); back up until we land on
+    // a leading byte (or run out of room).
+    while (take > 0 && offset + take < buf.length) {
+      const b = buf[offset + take];
+      if ((b & 0xc0) !== 0x80) break;
+      take -= 1;
+    }
+    if (take <= 0) {
+      // Pathological — single codepoint wider than the budget. Fall through
+      // and emit the leading byte so we don't loop forever; result will be
+      // mojibake but never crash.
+      take = 1;
+    }
+    out.push(prefix + buf.subarray(offset, offset + take).toString('utf8'));
+    offset += take;
+    max = CONT_MAX;
+    prefix = ' ';
   }
   return out;
 }

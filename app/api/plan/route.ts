@@ -153,7 +153,11 @@ export async function POST(req: NextRequest) {
 }
 
 function synthTaskId(person: string, protocolName: string, idx: number): string {
+  // 0-based idx to match array indices and the frontend's synthTaskId in
+  // components/HomeForm.tsx (the two used to disagree, which would silently
+  // collide if the backend ever had to synthesize an id for a task the
+  // frontend already named).
   const slug = (s: string) =>
     s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-  return `${slug(person)}__${slug(protocolName)}__${idx + 1}`;
+  return `${slug(person)}__${slug(protocolName)}__${idx}`;
 }

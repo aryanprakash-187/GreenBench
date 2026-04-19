@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { TopBar, Footer } from "@/components/OverviewPage";
 import {
   loadSubmission,
@@ -42,6 +43,7 @@ const FAMILY_TONES: Record<string, "moss" | "ocean" | "sand"> = {
 };
 
 export default function SchedulesPage({ onBack }: SchedulesPageProps = {}) {
+  const router = useRouter();
   const [data, setData] = useState<Submission | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ok" | "missing">(
     "loading",
@@ -58,6 +60,14 @@ export default function SchedulesPage({ onBack }: SchedulesPageProps = {}) {
       setLoadState("missing");
     }
   }, []);
+
+  // Bounce direct/refresh visits without a submission back to step 1 after a
+  // brief readable pause, so users aren't stranded on the MissingState card.
+  useEffect(() => {
+    if (loadState !== "missing") return;
+    const t = window.setTimeout(() => router.replace("/"), 1500);
+    return () => window.clearTimeout(t);
+  }, [loadState, router]);
 
   const plan = data?.plan;
   const inputs = data?.inputs ?? [];
@@ -415,8 +425,8 @@ function describePersonEvents(
       key: `task__${t.task_id}`,
       title: t.protocol_name,
       day: start.toLocaleDateString(undefined, { weekday: "short" }),
-      start: t.start_iso.slice(11, 16),
-      end: t.end_iso.slice(11, 16),
+      start: formatLocalHm(start),
+      end: formatLocalHm(end),
       durationMin: Math.max(
         0,
         Math.round((end.getTime() - start.getTime()) / 60000),
@@ -448,8 +458,8 @@ function describePersonEvents(
         ? `Shared prep — ${groupLabel}`
         : `Shared run — ${groupLabel}`,
       day: start.toLocaleDateString(undefined, { weekday: "short" }),
-      start: peerTask.start_iso.slice(11, 16),
-      end: peerTask.end_iso.slice(11, 16),
+      start: formatLocalHm(start),
+      end: formatLocalHm(end),
       durationMin: Math.max(
         0,
         Math.round((end.getTime() - start.getTime()) / 60000),
@@ -471,6 +481,15 @@ function countPassthroughEvents(ics: string): number {
 }
 
 /* ---------- helpers ---------- */
+
+function formatLocalHm(d: Date): string {
+  if (Number.isNaN(d.getTime())) return "--:--";
+  return d.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
 
 function humanize(s: string): string {
   return s.replace(/_/g, " ");

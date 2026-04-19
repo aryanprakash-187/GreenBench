@@ -78,6 +78,23 @@ export function scheduleWeek(
     }
   }
 
+  // task_id -> set of peer task_ids it shares an equipment-run coordination
+  // with. Used by the placer to prefer aligning with an already-placed peer
+  // rather than walking past their equipment reservation. Without this, the
+  // greedy pass essentially never aligns shared_equipment_run participants
+  // (the first placement reserves the instrument and pushes everyone else
+  // forward), so the "equipment runs saved" headline rolls up to 0.
+  const equipmentPeers = new Map<string, Set<string>>();
+  for (const c of coordinations) {
+    if (c.type !== 'shared_equipment_run') continue;
+    const ids = c.participants.map((p) => p.task_id);
+    for (const id of ids) {
+      const peers = equipmentPeers.get(id) ?? new Set<string>();
+      for (const other of ids) if (other !== id) peers.add(other);
+      equipmentPeers.set(id, peers);
+    }
+  }
+
   // Flatten with person attribution.
   const flat: { person: EnginePerson; task: HydratedTask }[] = [];
   for (const p of people) for (const t of p.tasks) flat.push({ person: p, task: t });
@@ -126,6 +143,7 @@ export function scheduleWeek(
       );
     }
 
+    const peerIds = equipmentPeers.get(task.task_id);
     const placement = placeTask({
       taskId: task.task_id,
       durationMs,
@@ -134,6 +152,15 @@ export function scheduleWeek(
       personFree: freeByPerson.get(person.name) ?? [],
       equipmentReservations,
       equipmentToReserve,
+      // Pre-placed peers from the same shared_equipment_run coordination.
+      // The placer will try their start time first and treat their existing
+      // equipment reservation as shareable rather than blocking.
+      equipmentPeerStarts: peerIds
+        ? scheduled
+            .filter((s) => peerIds.has(s.task_id))
+            .map((s) => new Date(s.start_iso).getTime())
+        : [],
+      equipmentPeerTaskIds: peerIds ?? new Set<string>(),
     });
 
     if (!placement) {
@@ -202,22 +229,49 @@ interface PlaceArgs {
   personFree: FreeInterval[];
   equipmentReservations: EquipmentReservation[];
   equipmentToReserve: { equipment_group: string; lab_id: string }[];
+  /** Start times of already-placed peers in a shared_equipment_run we should
+   *  try to align with. The placer attempts these first. */
+  equipmentPeerStarts: number[];
+  /** Task ids whose equipment reservations are shareable with this task
+   *  (same shared_equipment_run coordination). */
+  equipmentPeerTaskIds: Set<string>;
 }
 
 function placeTask(a: PlaceArgs): { start: number; end: number } | null {
+  // 1. Try aligning with an already-placed shared_equipment_run peer first.
+  //    The peer's start is only viable if (a) the candidate window is fully
+  //    inside one of our person's free intervals, (b) it respects the
+  //    family-ordering earliest, and (c) no NON-peer task is holding the
+  //    same equipment in that window.
+  for (const peerStart of a.equipmentPeerStarts) {
+    if (peerStart < a.earliestStartMs) continue;
+    const candidateEnd = peerStart + a.durationMs;
+    if (candidateEnd > a.latestEndMs) continue;
+    if (!fitsInsideFree(a.personFree, peerStart, candidateEnd)) continue;
+    const conflict = findEquipmentConflict(
+      peerStart,
+      candidateEnd,
+      a.equipmentToReserve,
+      a.equipmentReservations,
+      a.equipmentPeerTaskIds
+    );
+    if (!conflict) return { start: peerStart, end: candidateEnd };
+  }
+
+  // 2. Greedy walk: earliest free slot that also clears equipment.
   for (const slot of a.personFree) {
     const slotStart = Math.max(slot.start, a.earliestStartMs);
     if (slotStart + a.durationMs > slot.end) continue;
     if (slotStart + a.durationMs > a.latestEndMs) continue;
 
-    // Walk forward inside this slot; equipment may push our start later.
     let candidate = slotStart;
     while (candidate + a.durationMs <= slot.end) {
       const conflict = findEquipmentConflict(
         candidate,
         candidate + a.durationMs,
         a.equipmentToReserve,
-        a.equipmentReservations
+        a.equipmentReservations,
+        a.equipmentPeerTaskIds
       );
       if (!conflict) return { start: candidate, end: candidate + a.durationMs };
       candidate = conflict.end; // jump past the conflict
@@ -226,15 +280,30 @@ function placeTask(a: PlaceArgs): { start: number; end: number } | null {
   return null;
 }
 
+function fitsInsideFree(
+  free: FreeInterval[],
+  start: number,
+  end: number
+): boolean {
+  for (const f of free) {
+    if (f.start <= start && f.end >= end) return true;
+  }
+  return false;
+}
+
 function findEquipmentConflict(
   start: number,
   end: number,
   toReserve: { lab_id: string }[],
-  reservations: EquipmentReservation[]
+  reservations: EquipmentReservation[],
+  shareableTaskIds: Set<string>
 ): EquipmentReservation | null {
   for (const need of toReserve) {
     for (const r of reservations) {
       if (r.lab_id !== need.lab_id) continue;
+      // Reservations belonging to a peer in the same shared_equipment_run
+      // are shareable — that's the entire point of batching the run.
+      if (shareableTaskIds.has(r.task_id)) continue;
       if (r.start < end && r.end > start) return r;
     }
   }
@@ -249,11 +318,15 @@ function computeFreeIntervals(
   weekEnd: number
 ): FreeInterval[] {
   // Operator availability (per weekday). Default = 08:00–22:00 if no
-  // operators row matches.
+  // operators row matches. Name comparison is case-insensitive AND
+  // diacritic-tolerant so an input person "Jose" matches an operators.csv
+  // entry "José" (and vice versa) — without normalization we silently fell
+  // back to the default window, dropping any custom availability.
   const ops = loadOperators();
+  const personKey = normalizeName(person.name);
   const opRow =
     (person.operator_id && ops.find((o) => o.id === person.operator_id)) ||
-    ops.find((o) => o.name.toLowerCase() === person.name.toLowerCase());
+    ops.find((o) => normalizeName(o.name) === personKey);
 
   const freeBlocks: FreeInterval[] = [];
   for (let day = 0; day < WEEK_DAYS; day++) {
@@ -306,6 +379,11 @@ function pickAvailabilityWindow(
   const raw = (op[cols[dow]] ?? '').trim();
   if (!raw) return defaultWindow;
   return parseHhMmRange(raw);
+}
+
+/** Lowercase + strip combining diacritics so "José" and "Jose" compare equal. */
+function normalizeName(s: string): string {
+  return s.normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
 }
 
 function parseHhMmRange(s: string): { startMin: number; endMin: number } | null {

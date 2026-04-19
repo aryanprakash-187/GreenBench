@@ -88,7 +88,7 @@ export function buildReagentCoordinations(
     );
 
     const stability = contribs[0].reagent.stability;
-    const hazardousReagent = isHazardousByGroup(overlapGroup);
+    const hazardousReagent = isHazardousByContribs(contribs);
 
     // CO2e: per-liter coefficient × saved volume in liters. Only one reagent
     // class per overlap_group, so any contributor is fine.
@@ -275,15 +275,36 @@ function collectReagentCitations(
   return out;
 }
 
-/** Naive: any reagent whose overlap group is an alcohol / chaotrope / solvent
- *  produces a hazardous disposal event when prepped separately. */
-function isHazardousByGroup(group: string): boolean {
-  return (
-    group.startsWith('ethanol_') ||
-    group.startsWith('isopropanol') ||
-    group.includes('chaotropic') ||
-    group.includes('master_mix')
-  );
+/** Comptox hazard flags that, when set on a reagent's EPA cache entry, mean
+ *  separate prep would generate a hazardous disposal event. We deliberately
+ *  do NOT include benign tags like `enzyme_master_mix`, `contains_tracking_dye`,
+ *  `low_hazard_aqueous`, `enzyme_solution`, or `solid_liquid_bead_waste` —
+ *  those would inflate the headline. */
+const HAZARDOUS_COMPTOX_FLAGS = new Set([
+  'flammable_solvent',
+  'chaotropic_salt',
+  'bleach_incompatibility',
+  'strong_oxidizer',
+  'corrosive',
+  'toxic',
+]);
+
+/** A coordination is hazardous if at least one contributing reagent's EPA
+ *  hazard summary either carries an RCRA waste code (the EPA's own
+ *  classification of regulated hazardous waste) or a known hazardous Comptox
+ *  flag. This replaces the older substring heuristic that incorrectly
+ *  classified every PCR master mix as hazardous on the strength of the
+ *  literal substring `master_mix`. */
+function isHazardousByContribs(contribs: ReagentContribution[]): boolean {
+  for (const c of contribs) {
+    const h = c.reagent.hazard;
+    if (!h) continue;
+    if (h.rcra_code) return true;
+    if ((h.comptox_hazard_flags ?? []).some((f) => HAZARDOUS_COMPTOX_FLAGS.has(f))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function synthesizeReagentRecommendation(

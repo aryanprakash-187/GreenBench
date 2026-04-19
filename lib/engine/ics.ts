@@ -19,6 +19,9 @@ interface RawEvent {
   start: Date | null;
   end: Date | null;
   summary: string;
+  /** True iff DTSTART was a date-only value (VALUE=DATE or YYYYMMDD). RFC
+   *  5545 says a date-only DTSTART with no DTEND covers the whole day. */
+  startIsDateOnly: boolean;
 }
 
 /** Parse an ICS string and return BusyIntervals that overlap the week.
@@ -47,7 +50,7 @@ export function parseIcsToBusy(
     const line = rawLine.trim();
     if (!line) continue;
     if (line === 'BEGIN:VEVENT') {
-      current = { start: null, end: null, summary: '' };
+      current = { start: null, end: null, summary: '', startIsDateOnly: false };
       continue;
     }
     if (line === 'END:VEVENT') {
@@ -65,6 +68,7 @@ export function parseIcsToBusy(
 
     if (propName === 'DTSTART') {
       current.start = parseIcsDate(head, value);
+      current.startIsDateOnly = isDateOnlyIcsValue(head, value);
     } else if (propName === 'DTEND') {
       current.end = parseIcsDate(head, value);
     } else if (propName === 'SUMMARY') {
@@ -73,11 +77,19 @@ export function parseIcsToBusy(
   }
 
   const intervals: BusyInterval[] = [];
+  const DAY_MS = 24 * 60 * 60 * 1000;
   for (const ev of events) {
     if (!ev.start) continue;
-    // ICS allows VEVENTs without DTEND (treated as zero-length / all-day);
-    // for busy-tracking purposes we model 1h default.
-    const end = ev.end ?? new Date(ev.start.getTime() + 60 * 60 * 1000);
+    // ICS allows VEVENTs without DTEND. RFC 5545 §3.6.1 says a date-only
+    // DTSTART with no DTEND covers the entire day (one-day all-day event);
+    // a datetime DTSTART with no DTEND is treated as zero duration. We
+    // bump the latter to a 1h default so a calendar entry someone forgot
+    // to give an end time still blocks something meaningful.
+    const end =
+      ev.end ??
+      (ev.startIsDateOnly
+        ? new Date(ev.start.getTime() + DAY_MS)
+        : new Date(ev.start.getTime() + 60 * 60 * 1000));
 
     // Clip to the planning week.
     const clipStart = ev.start < weekStart ? weekStart : ev.start;
@@ -124,15 +136,22 @@ function mergeOverlapping(intervals: BusyInterval[]): BusyInterval[] {
 /** Parse an ICS date/datetime value. Supports:
  *   20260420T140000Z          (UTC)
  *   20260420T140000           (floating local — interpreted as UTC for demo)
- *   20260420                  (date-only, all-day; treated as 00:00–23:59)
+ *   20260420                  (date-only; midnight UTC of that day — the
+ *                              caller is responsible for extending the end
+ *                              bound to cover the full day if no DTEND was
+ *                              supplied)
  *  When `head` carries `;VALUE=DATE` we always treat the value as date-only.
  *  When `head` carries `;TZID=...` we ignore the TZ (demo simplification —
  *  uploaded calendars from the team are expected to be UTC or floating). */
-function parseIcsDate(head: string, value: string): Date | null {
-  const isDateOnly =
-    head.toUpperCase().includes('VALUE=DATE') && !value.includes('T');
+function isDateOnlyIcsValue(head: string, value: string): boolean {
+  return (
+    (head.toUpperCase().includes('VALUE=DATE') && !value.includes('T')) ||
+    /^\d{8}$/.test(value)
+  );
+}
 
-  if (isDateOnly || /^\d{8}$/.test(value)) {
+function parseIcsDate(head: string, value: string): Date | null {
+  if (isDateOnlyIcsValue(head, value)) {
     // YYYYMMDD → midnight UTC of that day.
     const m = /^(\d{4})(\d{2})(\d{2})$/.exec(value);
     if (!m) return null;
@@ -158,15 +177,20 @@ function unescapeIcsText(s: string): string {
     .replace(/\\\\/g, '\\');
 }
 
-/** Compute the ISO timestamp for the next Monday at 00:00 in the user's
- *  local timezone, expressed as UTC ISO (Date is timezone-agnostic for our
- *  scheduling purposes). If today is Monday, returns today. */
+/** Compute the ISO timestamp for the next Monday at 00:00 UTC. The whole
+ *  engine treats `week_start_iso` as a UTC anchor (the scheduler uses
+ *  `getUTCDay()` to walk the days of the week), so we keep this calculation
+ *  in UTC end-to-end. Mixing local and UTC arithmetic here would make a
+ *  server in CET/JST etc. report "Monday" but anchor on Sunday UTC, then
+ *  the scheduler would map operator availability to the wrong day column.
+ *
+ *  If today (UTC) is Monday, returns today at 00:00 UTC. */
 export function nextMondayLocalIso(now: Date = new Date()): string {
-  const d = new Date(now);
-  const dayOfWeek = d.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-  // Days until next Monday (0 if already Monday)
+  const d = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  );
+  const dayOfWeek = d.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
   const daysUntil = (1 - dayOfWeek + 7) % 7;
-  d.setDate(d.getDate() + daysUntil);
-  d.setHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() + daysUntil);
   return d.toISOString();
 }

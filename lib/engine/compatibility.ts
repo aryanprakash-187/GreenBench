@@ -22,7 +22,11 @@ interface WasteRuleRow {
   waste_group_b: string;
   compatible: 'yes' | 'no' | 'check';
   reason: string;
-  severity: 'critical' | 'warning' | 'info';
+  // 'check' included so the row's severity column matches Separation.severity
+  // even when a future CSV row uses 'check' as its severity (the runtime
+  // assignment in buildSeparations already maps `compatible === 'check'` to
+  // severity 'check', and the type now reflects that).
+  severity: 'critical' | 'warning' | 'info' | 'check';
 }
 
 let _wasteRules: WasteRuleRow[] | null = null;

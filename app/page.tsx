@@ -13,7 +13,6 @@ export default function Page() {
   const [people, setPeople] = useState<Person[]>(() => [
     { ...EMPTY_PERSON },
     { ...EMPTY_PERSON },
-    { ...EMPTY_PERSON },
   ]);
 
   useEffect(() => {

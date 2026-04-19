@@ -46,6 +46,15 @@ export default function OverviewPage({ onBack, onNext }: OverviewPageProps = {})
     }
   }, []);
 
+  // Direct visit / refresh-after-clear should not leave the user on a dead
+  // end. Briefly show the MissingState so the message is visible, then push
+  // them back to step 1.
+  useEffect(() => {
+    if (loadState !== "missing") return;
+    const t = window.setTimeout(() => router.replace("/"), 1500);
+    return () => window.clearTimeout(t);
+  }, [loadState, router]);
+
   const names = namesList(data);
   const labelName =
     names.length === 0
@@ -183,7 +192,7 @@ function MissingState() {
         We couldn&rsquo;t find a saved submission.
       </h3>
       <p className="mx-auto mt-3 max-w-md text-sm text-clay-700/85">
-        Head back to step 1, fill in the form for all three labmates, and
+        Head back to step 1, fill in the form for all your labmates, and
         submit. We keep everything in your browser, so an incognito tab or a
         cleared cache will look like this.
       </p>
@@ -538,8 +547,6 @@ function WarningCard({ sep }: { sep: NarratedSeparation }) {
 
 /* ---------- Stage block grid ---------- */
 
-const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
-
 const FAMILY_TONES: Record<string, "moss" | "ocean" | "sand"> = {
   DNA_extraction: "moss",
   PCR: "ocean",
@@ -557,11 +564,19 @@ function StageBlocks({
     () => new Date(plan.week_start_iso),
     [plan.week_start_iso],
   );
-  const dayKeys: number[] = [0, 1, 2, 3, 4];
-  const hasSat = plan.schedule.some((s) => dayIndex(s.start_iso, weekStart) === 5);
-  const hasSun = plan.schedule.some((s) => dayIndex(s.start_iso, weekStart) === 6);
-  if (hasSat) dayKeys.push(5);
-  if (hasSun) dayKeys.push(6);
+
+  // Always show 5 columns starting at the local day of weekStart, then add
+  // any extra day-offsets the schedule actually uses (Sat / Sun overflow,
+  // or under-UTC drift for users whose local week starts a day "early").
+  const dayKeys = useMemo(() => {
+    const used = new Set<number>();
+    for (let i = 0; i < 5; i++) used.add(i);
+    for (const s of plan.schedule) {
+      const d = dayIndex(s.start_iso, weekStart);
+      if (d >= 0 && d <= 6) used.add(d);
+    }
+    return Array.from(used).sort((a, b) => a - b);
+  }, [plan.schedule, weekStart]);
 
   const peopleNames =
     data?.inputs?.map((p) => p.name) ??
@@ -594,7 +609,7 @@ function StageBlocks({
               key={d}
               className="bg-forest-700/5 px-4 py-3 text-[11px] uppercase tracking-[0.18em] text-forest-800/60"
             >
-              {DAY_LABELS[d]}
+              {dayLabel(weekStart, d)}
             </div>
           ))}
           {cleanedNames.length === 0 ? (
@@ -671,7 +686,7 @@ function Block({ task }: { task: ScheduledTask }) {
       : tone === "ocean"
       ? "bg-ocean-100/80 text-ocean-700 border-ocean-400/40"
       : "bg-sand-200 text-clay-600 border-clay-400/40";
-  const startTime = task.start_iso.slice(11, 16);
+  const startTime = formatLocalHm(task.start_iso);
   return (
     <div
       className={`rounded-lg border px-2 py-2 text-[11px] font-semibold ${cls}`}
@@ -686,13 +701,45 @@ function Block({ task }: { task: ScheduledTask }) {
   );
 }
 
+/** Place each task in the column of its **local** weekday relative to the
+ *  local-day of weekStart. The engine plans in UTC, but the lab cares about
+ *  what local day they're physically running PCR — these can diverge for
+ *  users far enough east/west of UTC. */
 function dayIndex(iso: string, weekStart: Date): number {
-  const t = new Date(iso).getTime();
-  const ws = weekStart.getTime();
-  if (Number.isNaN(t) || Number.isNaN(ws)) return -1;
-  const ms = t - ws;
+  const t = new Date(iso);
+  if (Number.isNaN(t.getTime()) || Number.isNaN(weekStart.getTime())) return -1;
+  const wsMidnight = new Date(
+    weekStart.getFullYear(),
+    weekStart.getMonth(),
+    weekStart.getDate()
+  ).getTime();
+  const tMidnight = new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+  const ms = tMidnight - wsMidnight;
   if (ms < 0) return -1;
-  return Math.floor(ms / (24 * 60 * 60 * 1000));
+  return Math.round(ms / (24 * 60 * 60 * 1000));
+}
+
+/** Short weekday label for the column at `offset` days after the local-day
+ *  of weekStart. Computed dynamically so a UTC-anchored weekStart that
+ *  falls on a Sunday locally still labels its columns correctly. */
+function dayLabel(weekStart: Date, offset: number): string {
+  const ws = new Date(
+    weekStart.getFullYear(),
+    weekStart.getMonth(),
+    weekStart.getDate()
+  );
+  ws.setDate(ws.getDate() + offset);
+  return ws.toLocaleDateString(undefined, { weekday: "short" });
+}
+
+function formatLocalHm(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "--:--";
+  return d.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }
 
 /* ---------- Diagnostics callout ---------- */
@@ -746,19 +793,21 @@ export function SectionCard({
   children,
 }: {
   eyebrow: string;
-  title: string;
-  lede?: string;
+  title: React.ReactNode;
+  lede?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  // We render the title as a React node (not via dangerouslySetInnerHTML) so
+  // a future LLM- or user-derived title can never become an XSS sink. Callers
+  // that need light emphasis can pass JSX (e.g. <em>) directly.
   return (
     <section className="rounded-3xl border border-forest-700/10 bg-white/70 p-6 shadow-soft backdrop-blur md:p-8">
       <p className="text-[10px] uppercase tracking-[0.25em] text-forest-800/55">
         {eyebrow}
       </p>
-      <h3
-        className="mt-1 font-display text-2xl font-semibold text-forest-800 md:text-3xl"
-        dangerouslySetInnerHTML={{ __html: title }}
-      />
+      <h3 className="mt-1 font-display text-2xl font-semibold text-forest-800 md:text-3xl">
+        {title}
+      </h3>
       {lede && (
         <p className="mt-2 max-w-2xl text-sm text-forest-800/70">{lede}</p>
       )}

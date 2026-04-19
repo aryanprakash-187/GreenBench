@@ -29,6 +29,9 @@ export const EMPTY_PERSON: Person = {
   sampleCount: "",
 };
 
+export const MIN_PEOPLE = 1;
+export const MAX_PEOPLE = 6;
+
 type HomeFormProps = {
   people: Person[];
   setPeople: React.Dispatch<React.SetStateAction<Person[]>>;
@@ -56,6 +59,18 @@ export default function HomeForm({
     });
   }
 
+  function addPerson() {
+    setPeople((prev) =>
+      prev.length >= MAX_PEOPLE ? prev : [...prev, { ...EMPTY_PERSON }],
+    );
+  }
+
+  function removePerson(index: number) {
+    setPeople((prev) =>
+      prev.length <= MIN_PEOPLE ? prev : prev.filter((_, i) => i !== index),
+    );
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (submitting) return;
@@ -79,7 +94,7 @@ export default function HomeForm({
       for (let pi = 0; pi < people.length; pi++) {
         const person = people[pi];
         const personName = person.name.trim();
-        const submissionProtocols: SubmissionProtocolInput[] = [];
+        let submissionProtocol: SubmissionProtocolInput | null = null;
 
         if (person.protocol) {
           done += 1;
@@ -119,7 +134,7 @@ export default function HomeForm({
             );
           }
 
-          submissionProtocols.push({
+          submissionProtocol = {
             filename: person.protocol.name,
             size: person.protocol.size,
             sample_count: samples,
@@ -128,7 +143,7 @@ export default function HomeForm({
             matched_via: json.match.matched_via,
             match_confidence: json.match.confidence,
             enriched: json.enriched,
-          });
+          };
         }
 
         submissionPeople.push({
@@ -136,7 +151,7 @@ export default function HomeForm({
           schedule_filename: person.schedule?.name ?? null,
           schedule_size: person.schedule?.size ?? null,
           schedule_ics_text: scheduleTexts[pi] || null,
-          protocols: submissionProtocols,
+          protocol: submissionProtocol,
         });
       }
 
@@ -151,10 +166,11 @@ export default function HomeForm({
         people: submissionPeople.map((p) => ({
           name: p.name,
           busy_ics_text: p.schedule_ics_text ?? undefined,
-          tasks: p.protocols.map((pr) => ({
-            task_id: pr.task_id,
-            protocol: pr.enriched,
-          })),
+          // The form collects at most one protocol per person; wrap in an
+          // array (or omit) so the engine's multi-task contract still holds.
+          tasks: p.protocol
+            ? [{ task_id: p.protocol.task_id, protocol: p.protocol.enriched }]
+            : [],
         })),
       };
 
@@ -245,8 +261,8 @@ export default function HomeForm({
             Fill in the fields below to start
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-forest-800/70">
-            Add up to three labmates. For each labmate, give their name,
-            upload their lab protocol, their calendar as an{" "}
+            Add up to {MAX_PEOPLE} labmates. For each labmate, give their
+            name, upload their lab protocol, their calendar as an{" "}
             <code className="font-mono text-xs">.ics</code> file, and their
             intended number of samples in their experiment. We&rsquo;ll find
             overlaps.
@@ -264,8 +280,38 @@ export default function HomeForm({
                 index={i}
                 person={person}
                 onChange={(patch) => updatePerson(i, patch)}
+                onRemove={
+                  people.length > MIN_PEOPLE ? () => removePerson(i) : undefined
+                }
               />
             ))}
+          </div>
+
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={addPerson}
+              disabled={people.length >= MAX_PEOPLE || submitting}
+              className="group inline-flex items-center gap-2 rounded-full border border-forest-700/20 bg-white/70 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-forest-800 shadow-soft transition enabled:hover:border-forest-700/40 enabled:hover:bg-white enabled:active:translate-y-px disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-3.5 w-3.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 5v14" />
+                <path d="M5 12h14" />
+              </svg>
+              <span>
+                {people.length >= MAX_PEOPLE
+                  ? `Max ${MAX_PEOPLE} labmates`
+                  : "Add labmate"}
+              </span>
+            </button>
           </div>
 
           {stage.kind === "error" && (
@@ -296,8 +342,12 @@ export default function HomeForm({
             </button>
             <p className="text-xs text-forest-800/60">
               {canSubmit
-                ? "All 3 people complete — ready to plan."
-                : `Fill in every field for all 3 people to continue. (${filledCount} of 3 complete.)`}
+                ? `All ${people.length} ${
+                    people.length === 1 ? "labmate" : "labmates"
+                  } complete — ready to plan.`
+                : `Fill in every field for all ${people.length} ${
+                    people.length === 1 ? "labmate" : "labmates"
+                  } to continue. (${filledCount} of ${people.length} complete.)`}
             </p>
           </div>
         </form>
@@ -363,10 +413,12 @@ function PersonBlock({
   index,
   person,
   onChange,
+  onRemove,
 }: {
   index: number;
   person: Person;
   onChange: (patch: Partial<Person>) => void;
+  onRemove?: () => void;
 }) {
   const accent: Accent = ACCENTS[index % ACCENTS.length];
 
@@ -401,22 +453,46 @@ function PersonBlock({
             </p>
           </div>
         </div>
-        {complete && (
-          <span className="flex items-center gap-1.5 rounded-full bg-moss-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-moss-700">
-            <svg
-              viewBox="0 0 24 24"
-              className="h-3 w-3"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        <div className="flex items-center gap-2">
+          {complete && (
+            <span className="flex items-center gap-1.5 rounded-full bg-moss-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-moss-700">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-3 w-3"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M5 12l5 5L20 7" />
+              </svg>
+              Ready
+            </span>
+          )}
+          {onRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              aria-label={`Remove labmate ${index + 1}`}
+              title="Remove labmate"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-forest-700/10 bg-white/70 text-forest-800/55 transition hover:border-clay-400/40 hover:bg-clay-400/10 hover:text-clay-700"
             >
-              <path d="M5 12l5 5L20 7" />
-            </svg>
-            Ready
-          </span>
-        )}
+              <svg
+                viewBox="0 0 24 24"
+                className="h-3.5 w-3.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M6 6l12 12" />
+                <path d="M18 6L6 18" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
@@ -565,9 +641,13 @@ function FileDropSlot({
 /* ---------- helpers ---------- */
 
 function parsePositiveInt(raw: string, fallback: number): number {
-  const n = parseInt(raw.trim(), 10);
+  // Math.round (instead of parseInt) so "8.7" rounds to 9 — the backend's
+  // /api/match handler now does the same, and the two sides agreeing matters
+  // because the same number is later sent to /api/plan as the canonical
+  // sample count for impact math.
+  const n = Number(raw.trim());
   if (!Number.isFinite(n) || n <= 0) return fallback;
-  return n;
+  return Math.round(n);
 }
 
 function synthTaskId(

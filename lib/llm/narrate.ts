@@ -79,16 +79,16 @@ export async function narrateWeekPlan(
     result.coordinations.length === 0 &&
     result.separations.length === 0
   ) {
-    return wrapFallback(result, '', 'no items to narrate');
+    return wrapFallback(result, 'no items to narrate');
   }
 
   // 1. If LLM is disabled or unavailable, fall through to templates.
   if (opts.disable_llm) {
-    return wrapFallback(result, '', 'LLM disabled by caller');
+    return wrapFallback(result, 'LLM disabled by caller');
   }
   const avail = llmAvailability();
   if (!avail.available) {
-    return wrapFallback(result, '', avail.reason);
+    return wrapFallback(result, avail.reason);
   }
 
   // 2. Try Gemini.
@@ -100,7 +100,7 @@ export async function narrateWeekPlan(
       err instanceof LlmClientError
         ? `LLM narration failed (${err.code}): ${err.message}`
         : `LLM narration threw: ${(err as Error).message}`;
-    return wrapFallback(result, '', reason);
+    return wrapFallback(result, reason);
   }
 }
 
@@ -244,9 +244,6 @@ function wrapGenerated(
 
 function wrapFallback(
   result: WeekPlanResult,
-  // For consistency we accept these even when empty so the call sites are
-  // symmetric with wrapGenerated().
-  _unused: '',
   fallbackReason: string
 ): NarratedWeekPlanResult {
   const coordinations: NarratedCoordination[] = result.coordinations.map(

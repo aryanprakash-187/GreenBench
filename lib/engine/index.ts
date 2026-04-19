@@ -48,9 +48,10 @@ export function planWeek(input: EnginePlanInput): WeekPlanResult {
     coordinations
   );
 
-  // 4. Impact rollup — uses savings from coordinations regardless of
-  //    alignment. (The README says we still surface the saving as advisory
-  //    even when the scheduler couldn't align participants.)
+  // 4. Impact rollup — sums savings only from coordinations the scheduler
+  //    actually aligned. Unaligned coordinations still ship in the result
+  //    (with aligned=false) so the UI can render them as advisory cards,
+  //    but we don't claim savings the lab didn't realize this week.
   const impact = rollupImpact(coordinations);
 
   return {

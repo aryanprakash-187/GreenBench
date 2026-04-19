@@ -22,6 +22,7 @@ import type {
   ProtocolSelectedRow,
 } from '../engine/types';
 import {
+  FLASH_LITE_MODEL,
   generateJson,
   llmAvailability,
   LlmClientError,
@@ -35,6 +36,14 @@ const CONFIDENCE_FLOOR = 0.55; // below this we don't trust the match
 const AMBIGUITY_DELTA = 0.1;   // top two scores within this band -> ambiguous
 const MAX_TEXT_FOR_KEYWORDS = 8_000;
 const MAX_TEXT_FOR_LLM = 4_000;
+// Matcher is a single-object classification — Flash-Lite is plenty smart and
+// roughly 1.5× faster than full Flash. Keeps p95 latency well under the
+// 20 s timeout even when we have to fall back from a 503.
+const MATCHER_MODEL = FLASH_LITE_MODEL;
+// 10 s wasn't enough headroom for a 1+ MB PDF round trip, especially under
+// transient Google-side load. 20 s comfortably covers a single retry of the
+// happy path while still being a hard ceiling the demo can survive.
+const MATCHER_TIMEOUT_MS = 20_000;
 
 export interface MatchInput {
   /** Original uploaded filename, e.g. "DNeasy_Blood_and_Tissue_Handbook.pdf". */
@@ -150,7 +159,15 @@ const FILENAME_NOISE = [
  *  alternate strings (vendor codenames, common abbreviations, family handles)
  *  the user might have in their filename. Strings are case-insensitive. */
 const PROTOCOL_ALIASES: Record<string, string[]> = {
-  'DNeasy Blood & Tissue': ['dneasy', 'dneasy blood', 'dneasy tissue', 'qiagen dneasy'],
+  'DNeasy Blood & Tissue': [
+    'dneasy',
+    'dneasy blood',
+    'dneasy tissue',
+    'qiagen dneasy',
+    // QIAGEN is the unique vendor for DNeasy in the seeded set, so plain
+    // filenames like "DNA Extraction - QIAGEN.pdf" resolve here.
+    'qiagen',
+  ],
   'GeneJET Genomic DNA Purification Kit': [
     'genejet',
     'genejet genomic',
@@ -171,6 +188,14 @@ const PROTOCOL_ALIASES: Record<string, string[]> = {
     'q5 high fidelity',
     'neb q5',
     'm0494',
+    // NEB is the unique vendor for Q5 in the seeded set, so plain filenames
+    // like "PCR - NEB.pdf" resolve here without ambiguity. Same pattern as
+    // 'qiagen' -> DNeasy, 'invitrogen' -> Platinum II, 'beckman' -> AMPure XP.
+    // Also a critical fallback: scan-only / oddly-encoded PCR PDFs from NEB
+    // sometimes can't be text-extracted by unpdf and Gemini's PDF endpoint
+    // rejects them with "The document has no pages." Filename alias is the
+    // only signal left when both tiers above fail.
+    'neb',
   ],
   'Platinum II Hot-Start PCR Master Mix (2X)': [
     'platinum ii',
@@ -178,6 +203,10 @@ const PROTOCOL_ALIASES: Record<string, string[]> = {
     'invitrogen platinum',
     'platinum hot-start',
     'platinum hot start',
+    // Invitrogen is the *unique* vendor for Platinum II among the seeded
+    // protocols, so even a bare "invitrogen" filename resolves here without
+    // ambiguity. Real-world example: "PCR - Invitrogen.pdf".
+    'invitrogen',
   ],
   'JumpStart REDTaq ReadyMix Reaction Mix': [
     'jumpstart',
@@ -185,6 +214,14 @@ const PROTOCOL_ALIASES: Record<string, string[]> = {
     'jumpstart redtaq',
     'sigma jumpstart',
     'p0982',
+    // Sigma-Aldrich is the unique vendor for JumpStart REDTaq in the seeded
+    // set, so "PCR - Sigma Aldrich.pdf" / "PCR - Sigma.pdf" resolve here even
+    // when PDF text extraction fails. Same vendor-uniqueness pattern as the
+    // other three families.
+    'sigma',
+    'aldrich',
+    'sigma aldrich',
+    'sigma-aldrich',
   ],
   'Agencourt AMPure XP PCR Purification': [
     'ampure',
@@ -192,6 +229,11 @@ const PROTOCOL_ALIASES: Record<string, string[]> = {
     'agencourt',
     'beckman ampure',
     'a63881', 'a63880',
+    // Beckman / Beckman Coulter is the unique vendor for AMPure XP in the
+    // seeded set. Filenames like "Bead Pur - Beckman Coulter.pdf" are
+    // unambiguous once the alias is registered.
+    'beckman',
+    'beckman coulter',
   ],
   'MagJET NGS Cleanup and Size Selection Kit': [
     'magjet ngs',
@@ -361,8 +403,14 @@ function mergeScores(
       byName.set(c.protocol_name, { ...c, reasons: [...c.reasons] });
       continue;
     }
-    // Combine: weighted average favoring the higher signal, dedup reasons.
-    const combinedScore = Math.min(1, existing.score * 0.6 + c.score * 0.6);
+    // Combine signals: trust the stronger one, then add a half-credit
+    // bonus from the weaker corroborating signal. This means a confident
+    // filename hit (1.0) is never *downgraded* by a silent keyword scan
+    // (0), and two weak signals (0.4 + 0.4) still beat a single weak
+    // signal alone (0.4 -> 0.6). Capped at 1.0.
+    const hi = Math.max(existing.score, c.score);
+    const lo = Math.min(existing.score, c.score);
+    const combinedScore = Math.min(1, hi + 0.5 * lo);
     const reasons = dedup([...existing.reasons, ...c.reasons]).slice(0, 5);
     byName.set(c.protocol_name, {
       protocol_name: c.protocol_name,
@@ -433,6 +481,8 @@ async function runLlmTier(input: MatchInput) {
     attachments,
     responseSchema: geminiResponseSchemaForMatch(),
     validate: protocolMatchSchema() as never,
+    model: MATCHER_MODEL,
+    timeoutMs: MATCHER_TIMEOUT_MS,
     temperature: 0,
   }) as Promise<{ protocol_name: string; confidence: number; reasons: string[] }>;
 }

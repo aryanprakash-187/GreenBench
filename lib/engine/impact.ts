@@ -4,6 +4,11 @@
 // prep_events_saved, runs_saved, hazardous_disposal_events_avoided, and
 // per-coordination CO2e ranges. This module just sums them and projects to
 // the annualized case (×52 if the same week were repeated).
+//
+// Only coordinations the scheduler actually aligned contribute to the
+// headline numbers. Unaligned recommendations still surface in the per-card
+// UI (with an "advisory" badge), but counting their savings in the rollup
+// would overstate what the lab actually pulled off this week.
 
 import type { Coordination, ImpactSummary, ImpactWeekly } from './types';
 
@@ -17,6 +22,7 @@ export function rollupImpact(coordinations: Coordination[]): ImpactSummary {
   };
 
   for (const c of coordinations) {
+    if (!c.aligned) continue;
     const s = c.savings;
     if (s.volume_ml) weekly.reagent_volume_saved_ml += s.volume_ml;
     if (s.prep_events_saved) weekly.prep_events_saved += s.prep_events_saved;
