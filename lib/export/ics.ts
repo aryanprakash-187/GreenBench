@@ -66,7 +66,16 @@ export function buildPersonIcs(opts: BuildPersonIcsOptions): string {
   lines.push('CALSCALE:GREGORIAN');
   lines.push('METHOD:PUBLISH');
   lines.push(`X-WR-CALNAME:Green Bench · ${escapeText(opts.personName)}`);
-  lines.push('X-WR-TIMEZONE:UTC');
+  // We deliberately do NOT emit X-WR-TIMEZONE. This non-standard header is
+  // honored by Google Calendar (and partially by Apple) as "interpret every
+  // naive DTSTART/DTEND in this calendar as being in this zone". The user's
+  // pass-through events are typically RFC 5545 floating times (no Z, no
+  // TZID) — they're meant to render at that wall-clock value in whatever
+  // timezone the viewer is sitting in. Declaring X-WR-TIMEZONE:UTC made
+  // Google reinterpret a 10:00:00 floating event as 10:00 UTC and shift it
+  // by the viewer's offset (e.g. 3am in GMT-7), which is wrong. Engine-
+  // emitted Green Bench events use explicit `Z` UTC times so they convert
+  // correctly with or without the header.
 
   // 1. Pass-through of the user's original VEVENT blocks. We grab them
   //    verbatim from the upload so any TZ definitions, RRULEs, etc. survive.
@@ -208,8 +217,8 @@ function buildTaskVevent(args: {
   out.push('BEGIN:VEVENT');
   out.push(`UID:${task.task_id}@greenbench.local`);
   out.push(`DTSTAMP:${stamp}`);
-  out.push(`DTSTART:${formatIcsUtcFromIso(task.start_iso)}`);
-  out.push(`DTEND:${formatIcsUtcFromIso(task.end_iso)}`);
+  out.push(`DTSTART:${formatIcsFloatingFromIso(task.start_iso)}`);
+  out.push(`DTEND:${formatIcsFloatingFromIso(task.end_iso)}`);
   out.push(`SUMMARY:Green Bench · ${escapeText(task.protocol_name)}`);
   out.push(`LOCATION:${escapeText(location)}`);
   out.push(`DESCRIPTION:${escapeText(description)}`);
@@ -267,8 +276,8 @@ function buildSharedReagentPrepVevent(args: {
   out.push('BEGIN:VEVENT');
   out.push(`UID:${coord.id}__${slug(personName)}@greenbench.local`);
   out.push(`DTSTAMP:${stamp}`);
-  out.push(`DTSTART:${formatIcsUtc(start)}`);
-  out.push(`DTEND:${formatIcsUtc(end)}`);
+  out.push(`DTSTART:${formatIcsFloating(start)}`);
+  out.push(`DTEND:${formatIcsFloating(end)}`);
   out.push(`SUMMARY:${escapeText(summary + peopleSuffix)}`);
   out.push(`LOCATION:${escapeText(location)}`);
   out.push(`DESCRIPTION:${escapeText(description)}`);
@@ -400,7 +409,9 @@ function foldLine(line: string): string[] {
   return out;
 }
 
-/** Format a Date as ICS UTC: 20260420T140000Z. */
+/** Format a Date as ICS UTC: 20260420T140000Z. Used for DTSTAMP only —
+ *  RFC 5545 §3.8.7.2 requires DTSTAMP to be UTC. Event start/end use the
+ *  floating-time formatter below. */
 function formatIcsUtc(d: Date): string {
   const pad = (n: number) => n.toString().padStart(2, '0');
   return (
@@ -415,8 +426,35 @@ function formatIcsUtc(d: Date): string {
   );
 }
 
-function formatIcsUtcFromIso(iso: string): string {
-  return formatIcsUtc(new Date(iso));
+/** Format a Date's UTC components as RFC 5545 floating time:
+ *  20260420T140000 (no trailing Z, no TZID parameter).
+ *
+ *  Why floating: the engine reasons about all naive input ICS times as if
+ *  they were UTC (lib/engine/ics.ts) and emits scheduled tasks as ISO UTC.
+ *  But the input ICS times are typically the user's local wall-clock times
+ *  (e.g. "Chem Lecture at 10:00" means 10am wherever Sohini lives, not
+ *  10:00 UTC). So when we hand the result back to a calendar viewer we
+ *  emit floating time too — the viewer renders the digits at face value
+ *  in its local zone. Round-trip stays consistent for a single-timezone
+ *  lab, which is the realistic deployment.
+ *
+ *  Multi-timezone collaboration would need real TZID handling end-to-end
+ *  (see TODO in lib/engine/ics.ts). */
+function formatIcsFloating(d: Date): string {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return (
+    d.getUTCFullYear().toString() +
+    pad(d.getUTCMonth() + 1) +
+    pad(d.getUTCDate()) +
+    'T' +
+    pad(d.getUTCHours()) +
+    pad(d.getUTCMinutes()) +
+    pad(d.getUTCSeconds())
+  );
+}
+
+function formatIcsFloatingFromIso(iso: string): string {
+  return formatIcsFloating(new Date(iso));
 }
 
 function humanize(s: string): string {
