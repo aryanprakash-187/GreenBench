@@ -5,3 +5,10 @@ node-lts.pkg
 .node.tar.xz
 node_modules/
 *.log
+
+# Next.js
+.next/
+out/
+build/
+.env.local
+.env*.local
