@@ -448,7 +448,7 @@ function describePersonEvents(
     rows.push({
       key: `task__${t.task_id}`,
       title: t.protocol_name,
-      day: start.toLocaleDateString(undefined, { weekday: "short" }),
+      day: start.toLocaleDateString(undefined, { weekday: "short", timeZone: "UTC" }),
       start: formatLocalHm(start),
       end: formatLocalHm(end),
       durationMin: Math.max(
@@ -516,7 +516,7 @@ function describePersonEvents(
       rows.push({
         key: `coord__${coord.id}__${personName}`,
         title: `Shared prep — ${groupLabel}`,
-        day: start.toLocaleDateString(undefined, { weekday: "short" }),
+        day: start.toLocaleDateString(undefined, { weekday: "short", timeZone: "UTC" }),
         start: formatLocalHm(start),
         end: formatLocalHm(end),
         durationMin: SHARED_PREP_DEFAULT_DURATION_MIN,
@@ -550,13 +550,14 @@ function countPassthroughEvents(ics: string): number {
 
 /* ---------- helpers ---------- */
 
+// The engine emits ISO UTC strings whose digits are intended as face-value
+// wall-clock time (matches the floating-time convention now used by the ICS
+// exporter — see lib/export/ics.ts::formatIcsFloating). Read the UTC
+// components directly so the preview and the downloaded calendar agree.
 function formatLocalHm(d: Date): string {
   if (Number.isNaN(d.getTime())) return "--:--";
-  return d.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 }
 
 function humanize(s: string): string {

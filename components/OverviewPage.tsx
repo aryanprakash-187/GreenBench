@@ -726,6 +726,7 @@ function StageBlocks({
     weekday: "long",
     month: "long",
     day: "numeric",
+    timeZone: "UTC",
   });
 
   return (
@@ -838,45 +839,50 @@ function Block({ task }: { task: ScheduledTask }) {
   );
 }
 
-/** Place each task in the column of its **local** weekday relative to the
- *  local-day of weekStart. The engine plans in UTC, but the lab cares about
- *  what local day they're physically running PCR — these can diverge for
- *  users far enough east/west of UTC. */
+/** Place each task in the column of its UTC weekday relative to the UTC day
+ *  of weekStart. The engine emits UTC ISO strings whose digits are intended
+ *  as face-value wall-clock time (matches the floating-time convention used
+ *  by the ICS exporter — see lib/export/ics.ts::formatIcsFloating), so the
+ *  preview reads UTC components directly to stay byte-for-byte consistent
+ *  with what the calendar app will render after import. */
 function dayIndex(iso: string, weekStart: Date): number {
   const t = new Date(iso);
   if (Number.isNaN(t.getTime()) || Number.isNaN(weekStart.getTime())) return -1;
-  const wsMidnight = new Date(
-    weekStart.getFullYear(),
-    weekStart.getMonth(),
-    weekStart.getDate()
-  ).getTime();
-  const tMidnight = new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+  const wsMidnight = Date.UTC(
+    weekStart.getUTCFullYear(),
+    weekStart.getUTCMonth(),
+    weekStart.getUTCDate()
+  );
+  const tMidnight = Date.UTC(
+    t.getUTCFullYear(),
+    t.getUTCMonth(),
+    t.getUTCDate()
+  );
   const ms = tMidnight - wsMidnight;
   if (ms < 0) return -1;
   return Math.round(ms / (24 * 60 * 60 * 1000));
 }
 
-/** Short weekday label for the column at `offset` days after the local-day
- *  of weekStart. Computed dynamically so a UTC-anchored weekStart that
- *  falls on a Sunday locally still labels its columns correctly. */
+/** Short weekday label for the column at `offset` days after the UTC day
+ *  of weekStart. timeZone:UTC keeps the label consistent with the
+ *  face-value digits the user will see in their imported calendar. */
 function dayLabel(weekStart: Date, offset: number): string {
   const ws = new Date(
-    weekStart.getFullYear(),
-    weekStart.getMonth(),
-    weekStart.getDate()
+    Date.UTC(
+      weekStart.getUTCFullYear(),
+      weekStart.getUTCMonth(),
+      weekStart.getUTCDate()
+    )
   );
-  ws.setDate(ws.getDate() + offset);
-  return ws.toLocaleDateString(undefined, { weekday: "short" });
+  ws.setUTCDate(ws.getUTCDate() + offset);
+  return ws.toLocaleDateString(undefined, { weekday: "short", timeZone: "UTC" });
 }
 
 function formatLocalHm(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "--:--";
-  return d.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 }
 
 /* ---------- Diagnostics callout ---------- */
