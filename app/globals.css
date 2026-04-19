@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -42,6 +42,32 @@ body {
   opacity: 0.6;
 }
 
+/* Twinkling molecular nodes on the hero */
+.sparkle {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: sparkle-twinkle 3.8s ease-in-out infinite;
+}
+
+@keyframes sparkle-twinkle {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.9);
+    filter: drop-shadow(0 0 0 rgba(226, 234, 217, 0));
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.25);
+    filter: drop-shadow(0 0 6px rgba(226, 234, 217, 0.9));
+  }
+  65% {
+    opacity: 0.75;
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 3px rgba(163, 184, 138, 0.6));
+  }
+}
+
 /* Hide default file input; we render custom */
 .file-input-hidden {
   position: absolute;
@@ -53,4 +79,82 @@ body {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* Rotating conic-gradient light effect for buttons */
+@property --spin-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.spin-light {
+  position: relative;
+  isolation: isolate;
+  border-radius: 9999px;
+}
+
+/* Animated ring that hugs the button edge */
+.spin-light::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  z-index: -2;
+  border-radius: inherit;
+  padding: 3px;
+  background: conic-gradient(
+    from var(--spin-angle, 0deg),
+    transparent 0deg,
+    rgba(163, 184, 138, 0.95) 35deg,
+    rgba(130, 167, 191, 1) 85deg,
+    rgba(245, 235, 220, 0.9) 135deg,
+    transparent 210deg,
+    transparent 360deg
+  );
+  animation: spin-light 3s linear infinite;
+  filter: saturate(1.15);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* Glow halo behind the button */
+.spin-light::after {
+  content: "";
+  position: absolute;
+  inset: -18px;
+  z-index: -3;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--spin-angle, 0deg),
+    transparent 0deg,
+    rgba(163, 184, 138, 0.55) 35deg,
+    rgba(130, 167, 191, 0.65) 85deg,
+    rgba(245, 235, 220, 0.5) 135deg,
+    transparent 210deg,
+    transparent 360deg
+  );
+  filter: blur(18px);
+  opacity: 0.8;
+  animation: spin-light 3s linear infinite;
+}
+
+@keyframes spin-light {
+  to {
+    --spin-angle: 360deg;
+  }
+}
+
+/* Fallback: rotate pseudo elements directly if @property is unsupported */
+@supports not (background: conic-gradient(from 0deg, red, red)) {
+  .spin-light::before,
+  .spin-light::after {
+    animation: spin-fallback 3s linear infinite;
+  }
+  @keyframes spin-fallback {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 }
