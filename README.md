@@ -4,7 +4,7 @@ A scheduling and coordination layer for university wet labs. Takes the week's pl
 
 The goal is not to redesign experiments. Protocols are sacred. The goal is to stop the same prep, the same gel run, and the same ethanol wash happening three times when it could happen once.
 
-For the hackathon demo we scope to three experiment families that form a connected molecular biology pipeline — DNA extraction → PCR → bead cleanup — with three protocols (different vendors) per family. Nine protocols total. This is deliberate: the three families are sequentially linked in real lab workflows, so the demo tells a coherent story across a full experiment lifecycle.
+For the hackathon demo we scope to three experiment families that form a connected molecular biology pipeline — DNA extraction → PCR → bead cleanup — with ten protocols (different vendors) per family. Thirty protocols total. This is deliberate: the three families are sequentially linked in real lab workflows, so the demo tells a coherent story across a full experiment lifecycle, and the per-family vendor depth gives the overlap engine a meaningful number of cross-vendor reagent matches to find.
 
 Built for the SD Hacks 2026 climate/energy/environment track.
 
@@ -74,7 +74,7 @@ Four distinct uses of hazard classification, in the order the engine uses them:
 ---
 
 ### In scope (must have)
-- 9 seeded protocols across three connected families: DNA extraction (3 vendors), PCR (3 vendors), bead cleanup (3 vendors)
+- 30 seeded protocols across three connected families: DNA extraction (10 vendors), PCR (10 vendors), bead cleanup (10 vendors)
 - Reagent term-normalization map (`raw_term → normalized_name → generic_overlap_group`) so cross-vendor reagents that are functionally the same can be identified
 - Reagent-and-hazard lookup populated from EPA TRI + CompTox, keyed by `epa_lookup_key` in the reagent map
 - Equipment catalog with capacity (thermocycler: 96 wells; centrifuge: 24 slots; magnetic plate: 96 wells; etc.)
@@ -90,7 +90,7 @@ Four distinct uses of hazard classification, in the order the engine uses them:
 - Shared-prep events appear on both collaborators' calendars in a shared free slot
 
 ### Stretch (nice to have)
-- PDF protocol upload and LLM parsing (30-PDF library exists as validation set — goal: parse the 21 not in the seeded 9 and see how many come through cleanly)
+- PDF protocol upload and LLM parsing (the same 30-PDF vendor library that backs the seeded set is also used as a validation set — goal: re-parse the PDFs end-to-end with the LLM and confirm the parser's output matches the hand-curated seed entries)
 - Missing-information interactive resolution (LLM asks clarifying questions)
 - Annualized impact projection
 - Shareable schedule URL
@@ -114,7 +114,7 @@ The tool is one scrollable experience across three pages. Every page answers exa
 The input page. One block per person added to the plan. Each person block contains:
 
 - **Name** — text input (e.g. "Sohini")
-- **Protocol selector** — choose one or more from the 9 seeded protocols, grouped by family (DNA extraction / PCR / bead cleanup). A person can be running multiple protocols this week.
+- **Protocol selector** — choose one or more from the 30 seeded protocols, grouped by family (DNA extraction / PCR / bead cleanup). A person can be running multiple protocols this week.
 - **Sample count** — integer input per selected protocol. The seeded protocols list reagents and timings for *one sample*; the engine multiplies by this number to get actual volumes and durations. Default value = `samples_default` from `protocol_reagents.csv`, capped at `samples_max`.
 - **Busy calendar** — `.ics` upload for that person's existing calendar events. The scheduler treats these as hard constraints.
 
@@ -196,7 +196,7 @@ benchgreen/
 │       └── ics.ts            # per-operator and combined .ics generation
 ├── data/
 │   ├── seed/
-│   │   ├── protocols_selected.csv   # 9 protocols (3 families × 3 vendors)
+│   │   ├── protocols_selected.csv   # 30 protocols (3 families × 10 vendors)
 │   │   ├── reagent_term_map.csv     # normalization + hazard flags + epa_lookup_key
 │   │   ├── equipment_term_map.csv   # equipment normalization
 │   │   ├── consumables_term_map.csv # tips, tubes, plates, etc.
@@ -225,7 +225,7 @@ Seed data lives in CSVs (edited in Google Sheets, exported to `/data/seed/*.csv`
 
 ### `protocols_selected.csv`
 
-The 9 seeded protocols across three families. Columns:
+The 30 seeded protocols across three families. Columns:
 - `family` — `DNA_extraction`, `PCR`, or `Bead_cleanup`
 - `vendor` — Qiagen, NEB, Thermo Scientific, etc.
 - `protocol_name` — full vendor name (e.g. "DNeasy Blood & Tissue")
@@ -235,7 +235,7 @@ The 9 seeded protocols across three families. Columns:
 
 ### `reagent_term_map.csv`
 
-The normalization layer. Every reagent that appears across the 9 protocols gets a row. Columns:
+The normalization layer. Every reagent that appears across the 30 protocols gets a row. Columns:
 - `raw_term` — how it appears in the vendor protocol (e.g. "Buffer AL")
 - `normalized_name` — canonical display name
 - `generic_overlap_group` — the cross-vendor functional class (e.g. `chaotropic_binding_buffer`, `ethanol_50_to_100`, `low_salt_elution_buffer`) — this is how the engine finds shareable reagents across different-vendor protocols
@@ -407,7 +407,7 @@ Three people, ~30 hours. Parallelism or death.
 Owns everything that touches the engine, the LLM integration, and deployment.
 
 - Day 1 hours 0–6: Repo skeleton, Next.js + Tailwind + shadcn/ui scaffolding, CSV loading utility (csv → typed in-memory structures), basic page routing, one working end-to-end stub (pick a protocol → get a trivial hardcoded schedule back).
-- Day 1 hours 6–16: Overlap engine. Start with reagent matching via `generic_overlap_group`, then equipment batching, then the greedy scheduler. Unit tests with small synthetic week plans using the 9 seeded protocols.
+- Day 1 hours 6–16: Overlap engine. Start with reagent matching via `generic_overlap_group`, then equipment batching, then the greedy scheduler. Unit tests with small synthetic week plans using the 30 seeded protocols.
 - Day 2 hours 0–8: Gemini API integration for the narrator (generating plain-English recommendations from the engine's structured output). LLM protocol parser if time. Impact calculator.
 - Day 2 hours 8–end: Integration, bug bash, deployment, demo prep.
 
@@ -417,7 +417,7 @@ Lean on Cursor heavily. Write the types first (protocol, reagent-map row, week p
 Owns the substance of the seeded protocols and the reagent-hazard data. This is the highest-leverage role on the team. If the seed data is wrong or thin, the demo lies.
 
 **Already done (good work):**
-- `protocols_selected.csv` with 9 protocols across 3 families (DNA extraction, PCR, bead cleanup)
+- `protocols_selected.csv` with 30 protocols across 3 families (DNA extraction, PCR, bead cleanup — 10 vendors per family)
 - `reagent_term_map.csv` with normalization, `generic_overlap_group`, `shareable_prep`, hazard flags, and `epa_lookup_key`
 - Supporting sheets: `equipment_term_map`, `consumables_term_map`, `waste_rules_map`, `overlap_rules`
 - 30-PDF library archived for LLM-parsing validation (stretch)
@@ -463,7 +463,7 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-EPA CompTox key: email `ccte_api@epa.gov` for a free key. If you're blocked on that, the cache file at `/data/epa_cache.json` is pre-populated for every reagent in the 9 seeded protocols, so the demo runs without it.
+EPA CompTox key: email `ccte_api@epa.gov` for a free key. If you're blocked on that, the cache file at `/data/epa_cache.json` is pre-populated for every reagent in the 30 seeded protocols, so the demo runs without it.
 
 ---
 
@@ -492,7 +492,7 @@ That's the pitch. Every claim points to a cite or a calculation. Three pages, on
 ## Known limits (say this out loud in the demo)
 
 - CO₂e numbers are ranges, not precise. Published coefficients for lab reagents vary by an order of magnitude depending on source.
-- Our 9 seeded protocols cover three connected families (DNA extraction, PCR, bead cleanup). Other molecular biology workflows (cloning, western blot, cell culture) would need their own reagent maps.
+- Our 30 seeded protocols cover three connected families (DNA extraction, PCR, bead cleanup). Other molecular biology workflows (cloning, western blot, cell culture) would need their own reagent maps.
 - EPA data classifies commercial chemicals. Some lab buffers are not individually tracked; we bucket them to the nearest reportable component and flag that in the UI.
 - Greedy scheduling is a heuristic, not optimal. Good enough for 10-task weeks; we'd need a proper CSP solver at 50+.
 
