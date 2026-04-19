@@ -1,0 +1,4 @@
+id,name,availability_mon,availability_tue,availability_wed,availability_thu,availability_fri,notes
+op1,Aryan,08:00-22:00,08:00-22:00,08:00-22:00,08:00-22:00,08:00-22:00,Broad demo operator window. Actual hard conflicts come from aryan_schedule.ics.
+op2,Sohini,08:00-22:00,08:00-22:00,08:00-22:00,08:00-22:00,08:00-22:00,Broad demo operator window. Actual hard conflicts come from sohini_schedule.ics.
+op3,Vikas,08:00-22:00,08:00-22:00,08:00-22:00,08:00-22:00,08:00-22:00,Broad demo operator window. Actual hard conflicts come from vikas_schedule.ics.

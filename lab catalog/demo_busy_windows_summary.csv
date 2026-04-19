@@ -1,0 +1,37 @@
+operator,date,start_time,end_time,summary,source_file,recurring
+Aryan,2026-04-20,11:00,12:20,Bio Lecture,aryan_schedule.ics,no
+Aryan,2026-04-20,12:30,13:30,Robotics Team Meeting,aryan_schedule.ics,no
+Aryan,2026-04-20,18:00,20:00,A Cappella Practice,aryan_schedule.ics,no
+Aryan,2026-04-21,10:00,11:00,Haircut Appointment,aryan_schedule.ics,no
+Aryan,2026-04-21,15:00,16:00,CS lecture,aryan_schedule.ics,no
+Aryan,2026-04-21,17:00,18:00,Math lecture,aryan_schedule.ics,no
+Aryan,2026-04-22,11:00,12:20,Bio Lecture,aryan_schedule.ics,no
+Aryan,2026-04-22,18:00,20:00,A Cappella Practice,aryan_schedule.ics,no
+Aryan,2026-04-23,08:00,10:00,Career Fair,aryan_schedule.ics,no
+Aryan,2026-04-23,15:00,16:00,CS lecture,aryan_schedule.ics,no
+Aryan,2026-04-23,17:00,18:00,Math lecture,aryan_schedule.ics,no
+Aryan,2026-04-24,11:00,12:20,Bio Lecture,aryan_schedule.ics,no
+Aryan,2026-04-24,18:00,20:00,A Cappella Practice,aryan_schedule.ics,no
+Sohini,2026-04-20,10:00,11:00,Chem Lecture,sohini_schedule.ics,no
+Sohini,2026-04-20,12:00,14:00,Dance class,sohini_schedule.ics,no
+Sohini,2026-04-20,20:00,21:00,Trivia Social,sohini_schedule.ics,no
+Sohini,2026-04-21,08:00,09:20,Oceanography Lecture,sohini_schedule.ics,no
+Sohini,2026-04-21,16:00,17:20,Physics Lecture,sohini_schedule.ics,no
+Sohini,2026-04-21,17:30,18:00,Apartment Tour,sohini_schedule.ics,no
+Sohini,2026-04-22,10:00,11:00,Chem Lecture,sohini_schedule.ics,no
+Sohini,2026-04-22,13:00,15:00,Dance class,sohini_schedule.ics,no
+Sohini,2026-04-23,08:00,09:20,Oceanography Lecture,sohini_schedule.ics,no
+Sohini,2026-04-23,15:00,16:00,BMES Meeting,sohini_schedule.ics,no
+Sohini,2026-04-23,16:00,17:20,Physics Lecture,sohini_schedule.ics,no
+Sohini,2026-04-24,10:00,11:00,Chem Lecture,sohini_schedule.ics,no
+Sohini,2026-04-24,12:00,14:00,Dance Class,sohini_schedule.ics,no
+Vikas,2026-04-20,13:00,14:00,Ecology Lecture,vikas_schedule.ics,yes
+Vikas,2026-04-20,14:00,15:00,Cell Bio Lecture,vikas_schedule.ics,yes
+Vikas,2026-04-20,19:00,21:00,Basketball Practice,vikas_schedule.ics,no
+Vikas,2026-04-21,15:00,16:20,Data Science Lecture,vikas_schedule.ics,yes
+Vikas,2026-04-22,13:00,14:00,Ecology Lecture,vikas_schedule.ics,yes
+Vikas,2026-04-22,14:00,15:00,Cell Bio Lecture,vikas_schedule.ics,yes
+Vikas,2026-04-23,15:00,16:20,Data Science Lecture,vikas_schedule.ics,yes
+Vikas,2026-04-23,17:00,19:00,Dog Shelter Volunteering,vikas_schedule.ics,no
+Vikas,2026-04-24,13:00,14:00,Ecology Lecture,vikas_schedule.ics,yes
+Vikas,2026-04-24,14:00,15:00,Cell Bio Lecture,vikas_schedule.ics,yes

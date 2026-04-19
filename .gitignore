@@ -1,6 +1,7 @@
 .DS_Store
 .toolchain/
 .tmp-clone/
+.venv/
 node-lts.pkg
 .node.tar.xz
 node_modules/
