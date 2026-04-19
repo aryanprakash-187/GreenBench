@@ -1,0 +1,19 @@
+waste_group_a,waste_group_b,compatible,reason,severity
+chaotropic_salt_liquid_waste,bleach_aqueous,no,Chaotropic salts / guanidine-containing streams must not be mixed with bleach-based aqueous waste.,critical
+bleach_aqueous,chaotropic_salt_liquid_waste,no,Chaotropic salts / guanidine-containing streams must not be mixed with bleach-based aqueous waste.,critical
+chaotropic_salt_liquid_waste,alcohol_liquid_waste,yes,Compatible only with segregation preferred; keep chaotropic and alcohol solvent streams physically separated.,warning
+alcohol_liquid_waste,chaotropic_salt_liquid_waste,yes,Compatible only with segregation preferred; keep chaotropic and alcohol solvent streams physically separated.,warning
+alcohol_liquid_waste,strong_oxidizer_waste,no,Ignitable alcohol waste must not be mixed with strong oxidizers.,critical
+strong_oxidizer_waste,alcohol_liquid_waste,no,Ignitable alcohol waste must not be mixed with strong oxidizers.,critical
+PCR_dye_mix_waste,aqueous_buffer,no,Dye-containing PCR waste should not contaminate general non-hazardous aqueous streams.,warning
+aqueous_buffer,PCR_dye_mix_waste,no,Dye-containing PCR waste should not contaminate general non-hazardous aqueous streams.,warning
+PCR_dye_mix_waste,enzyme_aqueous_waste,no,Dye-containing PCR waste should stay separate from low-hazard enzyme solutions.,warning
+enzyme_aqueous_waste,PCR_dye_mix_waste,no,Dye-containing PCR waste should stay separate from low-hazard enzyme solutions.,warning
+solid_liquid_bead_waste,alcohol_liquid_waste,yes,Magnetic bead workflows commonly co-occur with alcohol wash steps; compatible with note and segregation.,info
+alcohol_liquid_waste,solid_liquid_bead_waste,yes,Magnetic bead workflows commonly co-occur with alcohol wash steps; compatible with note and segregation.,info
+enzyme_aqueous_waste,aqueous_buffer,yes,Low-volume enzyme solutions and general aqueous buffers are non-reactive and may be handled together where local policy permits.,info
+aqueous_buffer,enzyme_aqueous_waste,yes,Low-volume enzyme solutions and general aqueous buffers are non-reactive and may be handled together where local policy permits.,info
+chemical_buffer_waste,aqueous_buffer,check,Vendor SDS or institutional segregation matrix should be checked before combining general chemical buffer waste with aqueous buffer waste.,warning
+aqueous_buffer,chemical_buffer_waste,check,Vendor SDS or institutional segregation matrix should be checked before combining general chemical buffer waste with aqueous buffer waste.,warning
+chemical_buffer_waste,alcohol_liquid_waste,check,Mixed solvent/buffer waste may be possible but should be reviewed against local hazardous waste segregation rules.,warning
+alcohol_liquid_waste,chemical_buffer_waste,check,Mixed solvent/buffer waste may be possible but should be reviewed against local hazardous waste segregation rules.,warning

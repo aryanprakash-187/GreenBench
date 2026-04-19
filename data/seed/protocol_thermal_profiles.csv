@@ -1,0 +1,4 @@
+protocol_name,initial_denature_temp_c,initial_denature_time_s,cycle_denature_temp_c,cycle_denature_time_s,annealing_temp_c,annealing_time_s,extension_temp_c,extension_time_s,cycles,final_extension_temp_c,final_extension_time_s,notes
+Q5 Hot Start High-Fidelity 2X Master Mix,98,30,98,10,60,20,72,30,30,72,120,Vendor gives annealing 50–72°C and extension 20–30 s/kb. Bundle default uses 60°C / 20 s / 30 s-kb as a modeled routine short-amplicon profile; adjust per primer pair.
+Platinum II Hot-Start PCR Master Mix (2X),94,120,94,15,60,15,68,15,30,68,0,"Vendor routine table lists 94°C 2 min; 25–35 cycles of 94°C 15 s, 60°C 15 s, 68°C 15 s/kb, then hold at 4°C. No separate final extension shown."
+JumpStart REDTaq ReadyMix Reaction Mix,94,120,94,30,60,30,72,120,30,72,300,Vendor gives annealing 55–68°C and 30–35 cycles. Bundle default uses midpoint 60°C and 30 cycles for deterministic equality checks.

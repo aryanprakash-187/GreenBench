@@ -1,5 +1,0 @@
-id,type,model,capacity,block_type,settings_configurable
-thermo-c1000-a,thermocycler,Bio-Rad C1000,96,96-well,"annealing_temp,extension_time,cycles"
-centrifuge-eppendorf-1,microcentrifuge,Eppendorf 5424,24,,
-magplate-ambion-1,magnetic_plate,Ambion 96-well,96,96-well,
-magrack-benchtop-1,magnetic_rack,Bench-top 12/24 tube magnet,24,tube,

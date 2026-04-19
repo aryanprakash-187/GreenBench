@@ -1,0 +1,9 @@
+This bundle replaces the earlier quick MVP data with a conservative, source-driven 9-protocol seed set.
+
+Important differences from the earlier bundle:
+- DNeasy tissue volumes are now taken from the tissue spin-column protocol / handbook examples.
+- GeneJET and MagJET extraction rows are tied directly to explicit cultured-cell manual protocols.
+- AMPure XP, MagJET NGS, and AxyPrep cleanup rows now use explicit vendor wash/elution values.
+- PCR protocols retain explicit reaction-component values and document where thermal defaults are modeled from ranges.
+- EPA cache keys are broad screening categories rather than overconfident chemical-by-chemical claims.
+- Template DNA volumes in PCR reactions are set to 0 µL in quantitative sheets because template input is variable and should not drive shared-prep savings.

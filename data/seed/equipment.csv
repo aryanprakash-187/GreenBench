@@ -1,0 +1,6 @@
+id,type,model,capacity,block_type,settings_configurable
+thermo-c1000-a,thermocycler,Bio-Rad C1000,96,96-well,"annealing_temp_c,extension_time_s,cycles"
+centrifuge-eppendorf-1,centrifuge,Eppendorf 5424,24,tube,
+magplate-spri-96,magnet_plate_96,Agencourt SPRIPlate 96 Ring Super Magnet Plate,96,96-well,
+magrack-magjet-1,magnet_rack_tube,Thermo Scientific MagJET Separation Rack,24,tube,
+thermomixer-1,incubation_mixer,Eppendorf Thermomixer,24,tube,"temp_c,rpm"

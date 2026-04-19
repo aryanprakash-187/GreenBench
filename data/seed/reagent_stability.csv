@@ -1,0 +1,15 @@
+generic_overlap_group,stable_hours_after_prep,storage_requirement,notes
+ethanol_96_100,168,room_temp,Neat 96–100% ethanol is stable under closed storage; modeled as long-stability solvent.
+ethanol_50_solution,168,room_temp,Diluted 50% ethanol is treated as stable for same-week use under closed storage.
+ethanol_70_fresh,24,room_temp,Protocols explicitly say fresh 70% ethanol should be prepared for optimal results; use within 24h.
+low_salt_elution_buffer,168,room_temp,Buffer AE / Elution Buffer is treated as long-stability.
+sterile_water,168,room_temp,Nuclease-free or reagent-grade water is long-stability.
+te_buffer,168,room_temp,TE-style elution buffer is long-stability.
+q5_master_mix,4,fridge_4c,Prepared PCR master mixes should stay short-horizon; use 4h guardrail.
+platinum_ii_master_mix,4,fridge_4c,Prepared PCR master mixes should stay short-horizon; use 4h guardrail.
+jumpstart_redtaq_readymix,2,room_temp,Assembled JumpStart reactions may stand at room temperature for up to 2 hours.
+pcr_primer,168,freezer_-20c,Primer stocks are long-stability when frozen; batch only for identical primer sets.
+binding_mix_magjet_ngs,24,room_temp,Manual states prepared Binding Mix must be used within 24 hours.
+wash_solution_magjet_ngs,168,room_temp,Working wash solution treated as week-stable under sealed storage.
+isopropanol_100,168,room_temp,Neat isopropanol is stable under closed storage; modeled as long-stability solvent.
+tris_elution_buffer,168,room_temp,Simple Tris elution buffer is long-stability under closed storage.
