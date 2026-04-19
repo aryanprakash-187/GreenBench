@@ -113,7 +113,7 @@ export default function HomeForm() {
         }}
       />
 
-      <div className="relative z-10 mx-auto max-w-4xl">
+      <div className="relative z-10 mx-auto max-w-7xl">
         <header className="mb-10 text-center">
           <p className="mb-3 inline-block rounded-full border border-forest-700/15 bg-white/50 px-3 py-1 text-[10px] uppercase tracking-[0.25em] text-forest-700/80 backdrop-blur">
             Step 1 · Plan the week
@@ -292,21 +292,21 @@ function PersonBlock({
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
         {/* Name */}
-        <div>
+        <div className="flex flex-col">
           <Label text="Name" />
           <input
             type="text"
             value={person.name}
             onChange={(e) => onChange({ name: e.target.value })}
             placeholder={index === 0 ? "e.g. Sohini" : `Labmate ${index + 1}`}
-            className="w-full rounded-xl border border-forest-700/15 bg-white/90 px-4 py-3 text-sm text-forest-900 outline-none transition placeholder:text-forest-900/35 focus:border-moss-500 focus:ring-4 focus:ring-moss-400/20"
+            className="h-[74px] w-full rounded-xl border border-forest-700/15 bg-white/90 px-4 text-sm text-forest-900 outline-none transition placeholder:text-forest-900/35 focus:border-moss-500 focus:ring-4 focus:ring-moss-400/20"
           />
         </div>
 
         {/* Lab Protocol */}
-        <div>
+        <div className="flex flex-col">
           <Label text="Lab Protocol" />
           <FileDropSlot
             accept=".pdf,.doc,.docx,.txt,.md"
@@ -318,7 +318,7 @@ function PersonBlock({
         </div>
 
         {/* Schedule (.ics) */}
-        <div>
+        <div className="flex flex-col">
           <Label text="Schedule (.ics)" />
           <FileDropSlot
             accept=".ics"
@@ -328,19 +328,19 @@ function PersonBlock({
             placeholder="Drop .ics or click"
           />
         </div>
-      </div>
 
-      {/* Number of Samples */}
-      <div className="mt-4">
-        <Label text="Number of Samples" />
-        <input
-          type="text"
-          inputMode="numeric"
-          value={person.sampleCount}
-          onChange={(e) => onChange({ sampleCount: e.target.value })}
-          placeholder="e.g. 8"
-          className="w-full rounded-xl border border-forest-700/15 bg-white/90 px-4 py-3 text-sm text-forest-900 outline-none transition placeholder:text-forest-900/35 focus:border-moss-500 focus:ring-4 focus:ring-moss-400/20 md:max-w-xs"
-        />
+        {/* Number of Samples */}
+        <div className="flex flex-col">
+          <Label text="Number of Samples" />
+          <input
+            type="text"
+            inputMode="numeric"
+            value={person.sampleCount}
+            onChange={(e) => onChange({ sampleCount: e.target.value })}
+            placeholder="e.g. 8"
+            className="h-[74px] w-full rounded-xl border border-forest-700/15 bg-white/90 px-4 text-sm text-forest-900 outline-none transition placeholder:text-forest-900/35 focus:border-moss-500 focus:ring-4 focus:ring-moss-400/20"
+          />
+        </div>
       </div>
     </div>
   );
