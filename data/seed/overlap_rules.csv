@@ -1,15 +1,14 @@
 generic_overlap_group,can_batch_prep,prep_overhead_ml,max_batch_ml,notes
-ethanol_96_100,yes,5.0,500.0,Supports same-day batching of high-concentration ethanol for binding steps.
-ethanol_50_solution,yes,5.0,500.0,Can be prepared once per day if multiple GeneJET-style tasks run together.
-ethanol_70_fresh,yes,5.0,250.0,Prepare fresh each day; cap recommended batch size below 250 mL for usability.
-low_salt_elution_buffer,yes,2.0,250.0,Generic low-salt elution buffer can be aliquoted once for multiple tasks.
-sterile_water,yes,5.0,500.0,Sterile water can be staged once across compatible PCR/cleanup tasks.
-te_buffer,yes,2.0,250.0,TE-style elution buffer can be aliquoted once if downstream applications are compatible.
-q5_master_mix,yes,0.05,2.5,Only valid when primer pair and thermocycler profile also match.
-platinum_ii_master_mix,yes,0.05,2.5,Only valid when primer pair and thermocycler profile also match.
-jumpstart_redtaq_readymix,yes,0.05,2.5,Short room-temperature stability; same-session batching only.
-pcr_primer,yes,0.01,0.5,Only batch when the exact same primer set is reused.
-binding_mix_magjet_ngs,yes,0.1,10.0,Binding Mix must be prepared fresh and used within 24 hours.
-wash_solution_magjet_ngs,yes,1.0,500.0,Working wash solution can be prepared once for the day or week under sealed storage.
-isopropanol_100,yes,5.0,500.0,Neat isopropanol can be staged once for same-day binding workflows.
-tris_elution_buffer,yes,2.0,250.0,Simple Tris elution buffer can be aliquoted once for compatible cleanup tasks.
+paramagnetic_cleanup_beads,yes,0.5,25000,Shared bead reservoir. One priming/setup pour (~0.5 mL) instead of separate per-task primes.
+ethanol_wash_solution,yes,1.0,50000,One pour of fresh 70/80% ethanol covers all seeded cleanups; ~1 mL bottle-rinse overhead per combined prep.
+low_salt_elution,yes,0.25,10000,Elution buffer/water staged once for coordinated cleanup blocks (~0.25 mL pipette dead volume).
+cleanup_binding_buffer,yes,1.0,50000,MagJET-like binding mixes pooled per automated block (~1 mL trough dead volume).
+shared_prep_buffer,yes,1.0,50000,Shared prep buffer across compatible workflows (~1 mL trough dead volume).
+pcr_master_mix,yes,0.5,25000,Legacy cross-vendor PCR master-mix bucket (kept for back-compat; per-product groups below supersede it).
+pcr_master_mix_q5,yes,0.5,25000,Shared Q5 Hot Start High-Fidelity 2X master-mix prep across Q5 users (~0.5 mL aliquot dead volume).
+pcr_master_mix_platinum_ii,yes,0.5,25000,Shared Platinum II Hot-Start Green master-mix prep across Platinum II users (~0.5 mL aliquot dead volume).
+pcr_master_mix_jumpstart_redtaq,yes,0.5,25000,Shared JumpStart REDTaq ReadyMix prep across JumpStart users (~0.5 mL aliquot dead volume).
+pcr_reaction_water,yes,0.2,10000,Shared nuclease-free water reservoir for PCR setup across compatible PCR runs (~0.2 mL pipette dead volume).
+primer_mix,no,0.0,0,Primers are target-gene specific; they cannot be shared across experiments that are amplifying different loci.
+dna_template_pool,no,0.0,0,Template DNA is per-experiment; never shared across different samples.
+enzyme_mix_prep,yes,0.3,10000,Shared enzyme prep (~0.3 mL cold-tube dead volume).

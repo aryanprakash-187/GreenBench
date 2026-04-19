@@ -1,20 +1,8 @@
 raw_term,normalized_name,consumable_group,plastic_burden_level,core_MVP_yes_no,notes
-DNeasy Mini spin column,DNeasy Mini spin column,spin_column,high,yes,Qiagen silica spin column
-GeneJET Genomic DNA Purification Column,GeneJET Genomic DNA Purification Column,spin_column,high,yes,Thermo silica spin column
-1.5 mL microcentrifuge tube,1.5 mL microcentrifuge tube,microcentrifuge_tube,medium,yes,Used across extraction workflows
-2 mL collection tube,2 mL collection tube,collection_tube,medium,yes,Spin-column collection tube
-0.2-mL PCR tube,0.2 mL PCR tube,pcr_tube,medium,yes,PCR reaction tube
-0.5-mL PCR tube,0.5 mL PCR tube,pcr_tube,medium,yes,PCR reaction tube
-96 well thermal cycling plate,96-well thermal cycling plate,pcr_plate,high,yes,AMPure XP cleanup plate
-300 μL round bottom microtiter plate,300 µL round bottom microtiter plate,round_bottom_plate,high,yes,AMPure XP transfer plate
-1.2 mL deep well microtiter plate,1.2 mL deep-well plate,deep_well_plate,high,yes,AMPure XP deep-well plate
-"Plate Seals, Adhesive or Heat",Plate seals,plate_seal,low,yes,AMPure XP plate sealing
-96 Deep Well Plate,96 Deep Well Plate,deep_well_plate,high,yes,PureLink 96-well prep consumable
-Foil Tape,Foil Tape,plate_seal,low,yes,PureLink 96-well prep tape
-Thermo Scientific KingFisher Duo elution strip,KingFisher Duo elution strip,automation_strip,medium,no,Automation only
-Thermo Scientific KingFisher Duo 12-Tip strip,KingFisher Duo 12-Tip strip,automation_strip,medium,no,Automation only
-Thermo Scientific KingFisher Flex 96 KF plate,KingFisher Flex 96 KF plate,automation_plate,high,no,Automation only
-Thermo Scientific KingFisher Flex 96-Tip Comb,KingFisher Flex 96-Tip Comb,automation_strip,medium,no,Automation only
-pipette tips,pipette tips,pipette_tips,high,yes,General disposable tips
-aerosol-resistant pipette tips,aerosol-resistant pipette tips,pipette_tips,high,yes,Filtered tips
-AirPore Tape Sheets,AirPore Tape Sheets,plate_seal,low,yes,Qiagen 96-well consumable
+96-well plate,plate_96well,plate,high,yes,Dominant automation consumable
+384-well plate,plate_384well,plate,high,yes,High-throughput cleanup plate
+deep well plate,deep_well_plate,plate,high,yes,Large-volume plate for automated workflows
+microcentrifuge tube,microcentrifuge_tube,tube,medium,yes,Manual cleanup vessel
+storage tube,storage_tube,tube,medium,yes,Final eluate vessel
+pipette tips,pipette_tips,tips,high,yes,Major plastic hotspot
+plate seal,plate_seal,seal,low,yes,High-throughput seal consumable

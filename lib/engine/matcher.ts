@@ -26,11 +26,27 @@ interface ReagentContribution {
   person: string;
   task_id: string;
   reagent: EnrichedReagent;
+  /** Protocol family of the task that owns this contribution (Bead_cleanup,
+   *  DNA_extraction, PCR). Used to keep cross-family reagents out of the same
+   *  bucket — e.g. nuclease-free water used in a PCR reaction should never
+   *  coordinate with low-salt elution buffer used in a bead cleanup, even
+   *  though the term map historically labelled both with the same functional
+   *  `low_salt_elution` group. */
+  family: string;
 }
 
-/** For every (overlap_group), collect all task contributions whose reagent is
- *  marked shareable AND has a batch_prep rule. Emit one Coordination per
- *  group whenever 2+ tasks contribute. */
+/** For every (workflow_family, overlap_group), collect all task contributions
+ *  whose reagent is marked shareable AND has a batch_prep rule. Emit one
+ *  Coordination per (family, group) bucket whenever 2+ tasks contribute.
+ *
+ *  We include the task's protocol family in the grouping key because the
+ *  `generic_overlap_group` from the reagent term map is *functional* (e.g.
+ *  "low_salt_elution") and intentionally cross-vendor — so two reagents from
+ *  entirely different workflows can land in the same group. A PCR user's
+ *  "nuclease-free water" and a bead-cleanup user's "Elution Buffer" are NOT
+ *  fungible even though both are labelled `low_salt_elution`: you can't prep
+ *  one batch of water and serve both purposes. Family gating prevents that
+ *  kind of phantom coordination. */
 export function buildReagentCoordinations(
   people: PersonView[]
 ): Coordination[] {
@@ -42,13 +58,16 @@ export function buildReagentCoordinations(
         if (!reagent.shareable_prep) continue;
         if (!reagent.batch_prep) continue;
         if (reagent.volume_total_ul <= 0) continue; // mineral oil overlay etc.
-        const list = byGroup.get(reagent.generic_overlap_group) ?? [];
+        const family = task.protocol.family;
+        const key = `${family}::${reagent.generic_overlap_group}`;
+        const list = byGroup.get(key) ?? [];
         list.push({
           person: person.name,
           task_id: task.task_id,
           reagent,
+          family,
         });
-        byGroup.set(reagent.generic_overlap_group, list);
+        byGroup.set(key, list);
       }
     }
   }
@@ -56,7 +75,8 @@ export function buildReagentCoordinations(
   const coordinations: Coordination[] = [];
   let counter = 0;
 
-  for (const [overlapGroup, contribs] of byGroup) {
+  for (const [, contribs] of byGroup) {
+    const overlapGroup = contribs[0].reagent.generic_overlap_group;
     // Need 2+ distinct tasks to coordinate.
     const taskIds = new Set(contribs.map((c) => c.task_id));
     if (taskIds.size < 2) continue;
@@ -156,29 +176,52 @@ export function buildEquipmentCoordinations(
   const flat: { person: string; task: HydratedTask }[] = [];
   for (const p of people) for (const t of p.tasks) flat.push({ person: p.name, task: t });
 
-  // Group by equipment_group (a task can use multiple groups; emit once per).
-  const byGroup = new Map<
-    string,
-    { person: string; task: HydratedTask; lab_id: string | null; capacity: number | null }[]
-  >();
+  // Group by (workflow_family, equipment_group). Family gating is important
+  // here because the equipment term map marks generic groups like
+  // `liquid_handler` and `plate_sealer` as batchable, which would otherwise
+  // pair unrelated protocols on the strength of "both people touched a
+  // liquid handler that week". In reality you can't run a PCR reaction setup
+  // program and an AMPure cleanup program as a single batched liquid-handler
+  // run — the deck layouts and methods are different. Thermocyclers are the
+  // one exception: even cross-family PCR-family tasks with the same thermal
+  // profile CAN batch, but they're already constrained by family in
+  // practice (only PCR-family protocols carry a thermal profile), so the
+  // family-equality gate doesn't change their behavior.
+  interface EquipMember {
+    person: string;
+    task: HydratedTask;
+    family: string;
+    equipment_group: string;
+    lab_id: string | null;
+    capacity: number | null;
+  }
+  const byGroup = new Map<string, EquipMember[]>();
 
   for (const { person, task } of flat) {
     for (const eq of task.protocol.equipment_required) {
-      // We only batch on equipment that the term map says is batchable AND
-      // that resolved to a real lab catalog row.
       if (!eq.batchable) continue;
       if (!eq.lab_id) continue;
-      const list = byGroup.get(eq.equipment_group) ?? [];
-      list.push({ person, task, lab_id: eq.lab_id, capacity: eq.capacity });
-      byGroup.set(eq.equipment_group, list);
+      const family = task.protocol.family;
+      const key = `${family}::${eq.equipment_group}`;
+      const list = byGroup.get(key) ?? [];
+      list.push({
+        person,
+        task,
+        family,
+        equipment_group: eq.equipment_group,
+        lab_id: eq.lab_id,
+        capacity: eq.capacity,
+      });
+      byGroup.set(key, list);
     }
   }
 
   const out: Coordination[] = [];
   let counter = 0;
 
-  for (const [group, members] of byGroup) {
+  for (const [, members] of byGroup) {
     if (members.length < 2) continue;
+    const group = members[0].equipment_group;
 
     // For thermocyclers, segment by thermal_profile equality.
     const segments =
@@ -225,10 +268,10 @@ export function buildEquipmentCoordinations(
   return out;
 }
 
-function segmentByThermalProfile(
-  members: { person: string; task: HydratedTask; lab_id: string | null; capacity: number | null }[]
-): { person: string; task: HydratedTask; lab_id: string | null; capacity: number | null }[][] {
-  const buckets = new Map<string, typeof members>();
+function segmentByThermalProfile<T extends { task: HydratedTask }>(
+  members: T[]
+): T[][] {
+  const buckets = new Map<string, T[]>();
   for (const m of members) {
     const key = thermalKey(m.task);
     const list = buckets.get(key) ?? [];
@@ -270,6 +313,7 @@ function collectReagentCitations(
       reagent: c.reagent.normalized_name,
       rcra_code: h.rcra_code,
       sources: h.sources,
+      cas_entries: h.cas_entries ?? [],
     });
   }
   return out;

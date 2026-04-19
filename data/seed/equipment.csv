@@ -1,7 +1,13 @@
-id,type,model,capacity,block_type,settings_configurable,notes
-thermo-c1000-a,thermocycler,Bio-Rad C1000,96,96-well,"annealing_temp,extension_time,cycles","Primary shared PCR instrument for seeded Q5, Platinum II, and JumpStart workflows. Capacity/scheduling field matches README examples."
-centrifuge-eppendorf-1,microcentrifuge,Eppendorf 5424,24,,,Primary spin-column extraction centrifuge for DNeasy and GeneJET-style workflows.
-magplate-ambion-1,magnetic_plate,Ambion 96-well,96,96-well,,Plate-format magnetic separation for AMPure XP and MagJET NGS cleanup.
-magrack-manual-1,magnetic_rack,Manual 24-tube magnetic rack,24,tube,,Tube-format magnetic separation for manual bead cleanup / genomic DNA extraction.
-heatblock-benchtop-1,heat_block,Benchtop dry bath,24,tube,temperature,Supports lysis and digestion incubations in extraction workflows.
-vortex-benchtop-1,vortex,Standard benchtop vortex mixer,1,,,"Shared support equipment. Included for completeness, though not the main batching bottleneck."
+id,type,model,capacity,block_type,settings_configurable,power_profile_group,power_draw_kw_active,power_draw_kw_idle,samples_per_run_low,samples_per_run_high,notes
+magsep-96-1,magnetic_separator,96-well magnetic separator,96,96-well,none,instrument_cycle,0.05,0.01,96,384,Shared across all automated 96-well cleanup runs.
+magsep-384-1,magnetic_separator,384-well magnetic separator,384,384-well,none,instrument_cycle,0.06,0.01,384,768,High-throughput separator for dense plate formats.
+kingfisher-flex-1,liquid_handler,Thermo KingFisher Flex,96,96-well,protocol_file,active_processing,0.9,0.18,96,768,Automation-compatible for MagJET cleanup/adapter removal.
+biomek-i5-1,liquid_handler,Beckman Biomek i5,96,96-well,deck_method,active_processing,1.1,0.22,96,768,Automation-compatible for AMPure cleanup.
+biomek-i7-1,liquid_handler,Beckman Biomek i7,384,384-well,deck_method,active_processing,1.35,0.3,384,1152,High-throughput platform for 384-well cleanup and multi-plate batching.
+hamilton-star-1,liquid_handler,Hamilton STAR,384,96-to-384 mixed,deck_method,active_processing,1.45,0.3,384,1152,Generic large-scale liquid handler assumption for 300-900 sample demo batches.
+plate-sealer-1,plate_sealer,Automated plate sealer,384,96-to-384 mixed,temperature,support_device,0.25,0.05,384,1152,Shared sealing step for automated cleanup plates.
+vortex-1,vortex,Benchtop vortex,1,,speed,support_device,0.08,0.01,1,12,Support equipment; not the main energy bottleneck.
+thermo-c1000-a,thermocycler,Bio-Rad C1000,96,96-well,"annealing_temp,extension_time,cycles",active_processing,0.85,0.15,96,384,Shared PCR thermocycler for all demo PCR protocols.
+centrifuge-plate-1,centrifuge,QIAGEN Plate Rotor 2x96 / 4-16S equivalent,192,96-well,"speed,time",active_processing,0.65,0.1,96,192,High-throughput plate centrifuge for DNeasy 96 and mock shared extraction blocks.
+qiacube-1,liquid_handler,QIAGEN QIAcube Connect,12,tube,protocol_file,active_processing,0.7,0.1,12,48,Added as mock automated extraction overlap device.
+thermomixer-1,support_device,Eppendorf ThermoMixer,24,tube,"temperature,speed",support_device,0.12,0.03,24,96,Shared incubation/mixing support device.

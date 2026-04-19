@@ -421,6 +421,22 @@ function describePersonEvents(
       .map((e) => e.lab_id ?? e.equipment_group)
       .filter(Boolean)
       .join(" · ");
+
+    // Resolve the other participants of every coordination this task is
+    // part of back to *person names*. t.shared_with stores opaque task_ids,
+    // which aren't useful to the viewer — but plan.coordinations has the
+    // participant list with person names we can surface instead.
+    const peers = uniq(
+      plan.coordinations
+        .filter((c) => c.participants.some((p) => p.task_id === t.task_id))
+        .flatMap((c) => c.participants.map((p) => p.person))
+        .filter((n) => n !== personName),
+    );
+
+    const baseLocation = equipment || "Lab bench";
+    const location =
+      peers.length > 0 ? `${baseLocation} · with ${peers.join(", ")}` : baseLocation;
+
     rows.push({
       key: `task__${t.task_id}`,
       title: t.protocol_name,
@@ -432,9 +448,12 @@ function describePersonEvents(
         Math.round((end.getTime() - start.getTime()) / 60000),
       ),
       tone,
-      location: equipment || "Lab bench",
-      description: `${t.protocol_name} for ${personName}.`,
-      shared: t.shared_with.length > 0,
+      location,
+      description:
+        peers.length > 0
+          ? `${t.protocol_name} for ${personName}. Shared with ${peers.join(", ")}.`
+          : `${t.protocol_name} for ${personName}.`,
+      shared: peers.length > 0 || t.shared_with.length > 0,
     });
   }
 

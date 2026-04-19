@@ -1,49 +1,42 @@
 raw_term,normalized_name,generic_overlap_group,workflow_family,stage,shareable_prep,hazard_or_handling_flag,epa_lookup_key,protocol_examples
-Buffer ATL,Buffer ATL,dneasy_buffer_atl,DNA_extraction,lysis,no,aqueous_lysis_buffer,aqueous_buffer,DNeasy Blood & Tissue
-Proteinase K,Proteinase K,proteinase_k_solution,DNA_extraction,lysis,no,enzyme_protease,enzyme_aqueous_waste,DNeasy Blood & Tissue
-Buffer AL,Buffer AL,chaotropic_binding_buffer,DNA_extraction,bind,no,chaotropic_salt_bleach_incompatible,chaotropic_salt_liquid_waste,DNeasy Blood & Tissue
-ethanol (96–100%),Ethanol (96–100%),ethanol_96_100,DNA_extraction,bind,yes,flammable_solvent,alcohol_liquid_waste,DNeasy Blood & Tissue
-Buffer AW1,Buffer AW1,column_wash_buffer_aw1,DNA_extraction,wash,no,flowthrough_bleach_incompatible,chaotropic_salt_liquid_waste,DNeasy Blood & Tissue
-Buffer AW2,Buffer AW2,column_wash_buffer_aw2,DNA_extraction,wash,no,ethanol_added_and_azide_preservative,chemical_buffer_waste,DNeasy Blood & Tissue
-Buffer AE,Buffer AE,low_salt_elution_buffer,DNA_extraction,elute,yes,low_hazard_elution_buffer,aqueous_buffer,DNeasy Blood & Tissue
-Lysis Solution,Lysis Solution,genejet_lysis_solution,DNA_extraction,lysis,no,lysis_buffer,chemical_buffer_waste,GeneJET Genomic DNA Purification Kit
-Proteinase K Solution,Proteinase K Solution,proteinase_k_solution,DNA_extraction,lysis,no,enzyme_protease,enzyme_aqueous_waste,GeneJET Genomic DNA Purification Kit|MagJET Genomic DNA Kit
-RNase A Solution,RNase A Solution,rnase_a_solution,DNA_extraction,lysis,no,enzyme_ribonuclease,enzyme_aqueous_waste,GeneJET Genomic DNA Purification Kit|MagJET Genomic DNA Kit
-50% ethanol,50% ethanol,ethanol_50_solution,DNA_extraction,bind,yes,flammable_solvent,alcohol_liquid_waste,GeneJET Genomic DNA Purification Kit
-Wash Buffer I,Wash Buffer I,genejet_wash_buffer_i,DNA_extraction,wash,no,ethanol_added_before_use,chemical_buffer_waste,GeneJET Genomic DNA Purification Kit
-Wash Buffer II,Wash Buffer II,genejet_wash_buffer_ii,DNA_extraction,wash,no,ethanol_added_before_use,chemical_buffer_waste,GeneJET Genomic DNA Purification Kit
-Elution Buffer,Elution Buffer,low_salt_elution_buffer,DNA_extraction,elute,yes,low_hazard_elution_buffer,aqueous_buffer,GeneJET Genomic DNA Purification Kit|MagJET Genomic DNA Kit|MagJET NGS Cleanup and Size Selection Kit
-0.15 M NaCl solution,0.15 M NaCl solution,saline_resuspension_solution,DNA_extraction,prep,no,saline_sample_resuspension,aqueous_buffer,MagJET Genomic DNA Kit
-Digestion Solution,Digestion Solution,magjet_digestion_solution,DNA_extraction,lysis,no,digestion_buffer,chemical_buffer_waste,MagJET Genomic DNA Kit
-Lysis Buffer,Lysis Buffer,magjet_lysis_buffer,DNA_extraction,lysis,no,lysis_buffer,chemical_buffer_waste,MagJET Genomic DNA Kit
-isopropanol,Isopropanol,isopropanol_100,DNA_extraction,bind,yes,flammable_solvent,alcohol_liquid_waste,MagJET Genomic DNA Kit
-magnetic beads suspension,Magnetic beads suspension,magnetic_bead_slurry,DNA_extraction,bind,no,paramagnetic_beads,solid_liquid_bead_waste,MagJET Genomic DNA Kit
-Wash Buffer 1,Wash Buffer 1,magjet_wash_buffer_1,DNA_extraction,wash,no,ethanol_added_before_use,chemical_buffer_waste,MagJET Genomic DNA Kit
-Wash Buffer 2,Wash Buffer 2,magjet_wash_buffer_2,DNA_extraction,wash,no,ethanol_added_before_use,chemical_buffer_waste,MagJET Genomic DNA Kit
-Q5 Hot Start High-Fidelity 2X Master Mix,Q5 Hot Start High-Fidelity 2X Master Mix,q5_master_mix,PCR,setup,yes,enzyme_master_mix,PCR_mix_small_volume,Q5 Hot Start High-Fidelity 2X Master Mix
-10 µM Forward Primer,Forward Primer,pcr_primer,PCR,setup,yes,oligo_solution,aqueous_buffer,Q5 Hot Start High-Fidelity 2X Master Mix|Platinum II Hot-Start PCR Master Mix (2X)
-10 µM Reverse Primer,Reverse Primer,pcr_primer,PCR,setup,yes,oligo_solution,aqueous_buffer,Q5 Hot Start High-Fidelity 2X Master Mix|Platinum II Hot-Start PCR Master Mix (2X)
-Forward primer (20 µM),Forward Primer,pcr_primer,PCR,setup,yes,oligo_solution,aqueous_buffer,JumpStart REDTaq ReadyMix Reaction Mix
-Reverse primer (20 µM),Reverse Primer,pcr_primer,PCR,setup,yes,oligo_solution,aqueous_buffer,JumpStart REDTaq ReadyMix Reaction Mix
-Template DNA,Template DNA,template_dna,PCR,setup,no,biological_template_input,aqueous_buffer,Q5 Hot Start High-Fidelity 2X Master Mix|Platinum II Hot-Start PCR Master Mix (2X)|JumpStart REDTaq ReadyMix Reaction Mix
-Nuclease-Free Water,Nuclease-Free Water,sterile_water,PCR,setup,yes,water_for_reaction_setup,aqueous_buffer,Q5 Hot Start High-Fidelity 2X Master Mix
-"Water, nuclease-free",Nuclease-Free Water,sterile_water,PCR,setup,yes,water_for_reaction_setup,aqueous_buffer,Platinum II Hot-Start PCR Master Mix (2X)
-Platinum II Hot-Start PCR Master Mix (2X),Platinum II Hot-Start PCR Master Mix (2X),platinum_ii_master_mix,PCR,setup,yes,enzyme_master_mix,PCR_mix_small_volume,Platinum II Hot-Start PCR Master Mix (2X)
-Platinum GC Enhancer,Platinum GC Enhancer,gc_enhancer_optional,PCR,setup,no,gc_enhancer_optional,chemical_buffer_waste,Platinum II Hot-Start PCR Master Mix (2X)
-JumpStart REDTaq ReadyMix,JumpStart REDTaq ReadyMix,jumpstart_redtaq_readymix,PCR,setup,yes,enzyme_master_mix_with_tracer_dye,PCR_dye_mix_waste,JumpStart REDTaq ReadyMix Reaction Mix
-PCR Reagent water,PCR Reagent water,sterile_water,PCR,setup,yes,water_for_reaction_setup,aqueous_buffer,JumpStart REDTaq ReadyMix Reaction Mix
-Mineral Oil,Mineral Oil,mineral_oil_overlay,PCR,setup,no,hydrocarbon_oil_overlay,chemical_buffer_waste,JumpStart REDTaq ReadyMix Reaction Mix
-mineral oil,Mineral Oil,mineral_oil_overlay,PCR,setup,no,hydrocarbon_oil_overlay,chemical_buffer_waste,Q5 Hot Start High-Fidelity 2X Master Mix
-Betaine,Betaine,betaine_optional_additive,PCR,setup,no,optional_pcr_additive,chemical_buffer_waste,JumpStart REDTaq ReadyMix Reaction Mix
-DMSO,DMSO,dmso_optional_additive,PCR,setup,no,optional_pcr_additive,chemical_buffer_waste,JumpStart REDTaq ReadyMix Reaction Mix
-Agencourt AMPure XP,Agencourt AMPure XP,ampure_xp_beads,Bead_cleanup,bind,no,paramagnetic_bead_reagent,solid_liquid_bead_waste,Agencourt AMPure XP PCR Purification
-Fresh 70% ethanol,Fresh 70% ethanol,ethanol_70_fresh,Bead_cleanup,wash,yes,fresh_flammable_wash_solvent,alcohol_liquid_waste,Agencourt AMPure XP PCR Purification
-Reagent Grade Water,Reagent Grade Water,sterile_water,Bead_cleanup,elute,yes,water_for_elution,aqueous_buffer,Agencourt AMPure XP PCR Purification|AxyPrep Mag PCR Clean-up
-TE Buffer,TE Buffer,te_buffer,Bead_cleanup,elute,yes,edta_containing_elution_buffer,aqueous_buffer,Agencourt AMPure XP PCR Purification
-Binding Mix,Binding Mix,binding_mix_magjet_ngs,Bead_cleanup,bind,yes,fresh_binding_mix,chemical_buffer_waste,MagJET NGS Cleanup and Size Selection Kit
-MagJET Magnetic Beads,MagJET Magnetic Beads,magnetic_bead_slurry,Bead_cleanup,bind,no,paramagnetic_beads,solid_liquid_bead_waste,MagJET NGS Cleanup and Size Selection Kit
-Wash Solution,Wash Solution,wash_solution_magjet_ngs,Bead_cleanup,wash,yes,working_wash_solution,chemical_buffer_waste,MagJET NGS Cleanup and Size Selection Kit
-AxyPrep Mag PCR clean-up bead solution,AxyPrep Mag PCR clean-up bead solution,axy_prep_bead_solution,Bead_cleanup,bind,no,paramagnetic_bead_reagent,solid_liquid_bead_waste,AxyPrep Mag PCR Clean-up
-70% Ethanol,70% Ethanol,ethanol_70_fresh,Bead_cleanup,wash,yes,fresh_flammable_wash_solvent,alcohol_liquid_waste,AxyPrep Mag PCR Clean-up
-"10 mM TRIS-HCl, pH=8.0",10 mM Tris-HCl pH 8.0,tris_elution_buffer,Bead_cleanup,elute,yes,low_salt_tris_elution_buffer,aqueous_buffer,AxyPrep Mag PCR Clean-up
-"10 mM Tris-HCl pH 8.0, 1 mM EDTA","10 mM Tris-HCl pH 8.0, 1 mM EDTA",te_buffer,Bead_cleanup,elute,yes,edta_containing_elution_buffer,aqueous_buffer,AxyPrep Mag PCR Clean-up
+AMPure XP,AMPure XP,paramagnetic_cleanup_beads,Bead_cleanup,bind,yes,viscous_bead_suspension,paramagnetic_cleanup_beads,Agencourt AMPure XP PCR Purification (96-well)|Agencourt AMPure XP PCR Purification (384-well)
+KAPA Pure Beads,KAPA Pure Beads,paramagnetic_cleanup_beads,Bead_cleanup,bind,yes,viscous_bead_suspension,paramagnetic_cleanup_beads,KAPA Pure Beads Genomic DNA Cleanup (3X)|KAPA Pure Beads Dual Size Selection (0.6X/0.8X)
+KAPA HyperPure Beads,KAPA HyperPure Beads,paramagnetic_cleanup_beads,Bead_cleanup,bind,yes,viscous_bead_suspension,paramagnetic_cleanup_beads,KAPA HyperPure Beads Genomic DNA Cleanup (3X)
+MagJET Magnetic Beads,MagJET Magnetic Beads,paramagnetic_cleanup_beads,Bead_cleanup,bind,yes,viscous_bead_suspension,paramagnetic_cleanup_beads,MagJET NGS Cleanup Protocol A|MagJET NGS Adapter Removal Protocol B
+NucleoMag NGS Bead Suspension,NucleoMag NGS Bead Suspension,paramagnetic_cleanup_beads,Bead_cleanup,bind,yes,viscous_bead_suspension,paramagnetic_cleanup_beads,NucleoMag NGS Single Cleanup (1.0X)
+Select-a-Size MagBeads,Select-a-Size MagBeads,paramagnetic_cleanup_beads,Bead_cleanup,bind,yes,viscous_bead_suspension,paramagnetic_cleanup_beads,Select-a-Size Left-Sided Cleanup (300 bp peak)
+fresh 70% ethanol,fresh_70_percent_ethanol,ethanol_wash_solution,Bead_cleanup,wash,yes,flammable_solvent,ethanol_wash_solution,Agencourt AMPure XP PCR Purification (96-well)|Agencourt AMPure XP PCR Purification (384-well)
+fresh 80% ethanol,fresh_80_percent_ethanol,ethanol_wash_solution,Bead_cleanup,wash,yes,flammable_solvent,ethanol_wash_solution,KAPA Pure Beads Genomic DNA Cleanup (3X)|KAPA Pure Beads Dual Size Selection (0.6X/0.8X)|KAPA HyperPure Beads Genomic DNA Cleanup (3X)|NucleoMag NGS Single Cleanup (1.0X)
+Wash Solution,Wash Solution,ethanol_wash_solution,Bead_cleanup,wash,yes,ethanol_supplemented_vendor_wash,ethanol_wash_solution,MagJET NGS Cleanup Protocol A|MagJET NGS Adapter Removal Protocol B
+DNA Wash Buffer,DNA Wash Buffer,ethanol_wash_solution,Bead_cleanup,wash,yes,ethanol_supplemented_vendor_wash,ethanol_wash_solution,Select-a-Size Left-Sided Cleanup (300 bp peak)
+Reagent Grade Water,Reagent Grade Water,low_salt_elution,Bead_cleanup,elute,yes,low_hazard_aqueous,low_salt_elution,Agencourt AMPure XP PCR Purification (96-well)|Agencourt AMPure XP PCR Purification (384-well)
+Elution Buffer,Elution Buffer,low_salt_elution,Bead_cleanup,elute,yes,low_hazard_aqueous,low_salt_elution,KAPA Pure Beads Genomic DNA Cleanup (3X)|KAPA Pure Beads Dual Size Selection (0.6X/0.8X)|KAPA HyperPure Beads Genomic DNA Cleanup (3X)|MagJET NGS Cleanup Protocol A|MagJET NGS Adapter Removal Protocol B|NucleoMag NGS Single Cleanup (1.0X)
+DNA Elution Buffer,DNA Elution Buffer,low_salt_elution,Bead_cleanup,elute,yes,low_hazard_aqueous,low_salt_elution,Select-a-Size Left-Sided Cleanup (300 bp peak)
+Binding Mix,Binding Mix,cleanup_binding_buffer,Bead_cleanup,bind,yes,chemical_buffer_with_solvent,cleanup_binding_buffer,MagJET NGS Cleanup Protocol A|MagJET NGS Adapter Removal Protocol B
+Buffer ATL,Buffer ATL,shared_prep_buffer,DNA_extraction,lysis,yes,aqueous_buffer,shared_prep_buffer,DNeasy 96 Blood & Tissue (Demo 96-well)
+Buffer AL,Buffer AL,shared_prep_buffer,DNA_extraction,bind,yes,chemical_buffer_waste,shared_prep_buffer,DNeasy 96 Blood & Tissue (Demo 96-well)
+Buffer AW1,Buffer AW1,ethanol_wash_solution,DNA_extraction,wash,yes,chemical_buffer_waste,ethanol_wash_solution,DNeasy 96 Blood & Tissue (Demo 96-well)
+Buffer AW2,Buffer AW2,ethanol_wash_solution,DNA_extraction,wash,yes,chemical_buffer_waste,ethanol_wash_solution,DNeasy 96 Blood & Tissue (Demo 96-well)
+Buffer AE,Buffer AE,low_salt_elution,DNA_extraction,elute,yes,aqueous_buffer,low_salt_elution,DNeasy 96 Blood & Tissue (Demo 96-well)
+Digestion Buffer,Digestion Buffer,shared_prep_buffer,DNA_extraction,lysis,yes,aqueous_buffer,shared_prep_buffer,GeneJET Genomic DNA Purification (Demo high-throughput)
+Lysis Solution,Lysis Solution,shared_prep_buffer,DNA_extraction,lysis,yes,chemical_buffer_waste,shared_prep_buffer,GeneJET Genomic DNA Purification (Demo high-throughput)
+RNase A,RNase A,enzyme_mix_prep,DNA_extraction,lysis,yes,enzyme_aqueous_waste,enzyme_mix_prep,GeneJET Genomic DNA Purification (Demo high-throughput)|MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96)
+50% ethanol,50% ethanol,ethanol_wash_solution,DNA_extraction,bind,yes,alcohol_liquid_waste,ethanol_wash_solution,GeneJET Genomic DNA Purification (Demo high-throughput)
+Wash Buffer I,Wash Buffer I,ethanol_wash_solution,DNA_extraction,wash,yes,chemical_buffer_waste,ethanol_wash_solution,GeneJET Genomic DNA Purification (Demo high-throughput)
+Wash Buffer II,Wash Buffer II,ethanol_wash_solution,DNA_extraction,wash,yes,chemical_buffer_waste,ethanol_wash_solution,GeneJET Genomic DNA Purification (Demo high-throughput)
+Digestion Solution,Digestion Solution,shared_prep_buffer,DNA_extraction,lysis,yes,aqueous_buffer,shared_prep_buffer,MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96)
+Lysis Buffer,Lysis Buffer,shared_prep_buffer,DNA_extraction,lysis,yes,chemical_buffer_waste,shared_prep_buffer,MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96)
+Wash Buffer 1,Wash Buffer 1,ethanol_wash_solution,DNA_extraction,wash,yes,chemical_buffer_waste,ethanol_wash_solution,MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96)
+Wash Buffer 2,Wash Buffer 2,ethanol_wash_solution,DNA_extraction,wash,yes,chemical_buffer_waste,ethanol_wash_solution,MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96)
+Q5 Hot Start High-Fidelity 2X Master Mix,Q5 Hot Start High-Fidelity 2X Master Mix,pcr_master_mix_q5,PCR,setup,yes,PCR_mix_small_volume,pcr_master_mix,Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well)
+Platinum II Hot-Start Green PCR Master Mix (2X),Platinum II Hot-Start Green PCR Master Mix (2X),pcr_master_mix_platinum_ii,PCR,setup,yes,PCR_dye_mix_waste,pcr_master_mix,Platinum II Hot-Start Green PCR Master Mix (Demo 96-well)
+JumpStart REDTaq ReadyMix,JumpStart REDTaq ReadyMix,pcr_master_mix_jumpstart_redtaq,PCR,setup,yes,PCR_dye_mix_waste,pcr_master_mix,JumpStart REDTaq ReadyMix (Demo 96-well)
+forward primer,forward primer,primer_mix,PCR,setup,no,enzyme_aqueous_waste,primer_mix,Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well)|Platinum II Hot-Start Green PCR Master Mix (Demo 96-well)|JumpStart REDTaq ReadyMix (Demo 96-well)
+reverse primer,reverse primer,primer_mix,PCR,setup,no,enzyme_aqueous_waste,primer_mix,Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well)|Platinum II Hot-Start Green PCR Master Mix (Demo 96-well)|JumpStart REDTaq ReadyMix (Demo 96-well)
+nuclease-free water,nuclease-free water,pcr_reaction_water,PCR,setup,yes,aqueous_buffer,pcr_reaction_water,Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well)|Platinum II Hot-Start Green PCR Master Mix (Demo 96-well)
+PCR Reagent water,PCR Reagent water,pcr_reaction_water,PCR,setup,yes,aqueous_buffer,pcr_reaction_water,JumpStart REDTaq ReadyMix (Demo 96-well)
+template DNA,template DNA,dna_template_pool,PCR,setup,no,aqueous_buffer,dna_template_pool,Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well)|Platinum II Hot-Start Green PCR Master Mix (Demo 96-well)|JumpStart REDTaq ReadyMix (Demo 96-well)
+Platinum GC Enhancer,Platinum GC Enhancer,pcr_additive_gc_enhancer,PCR,setup,no,chemical_buffer_waste,pcr_additive_gc_enhancer,Platinum II Hot-Start Green PCR Master Mix (Demo 96-well)
+Mineral Oil,Mineral Oil,pcr_additive_mineral_oil,PCR,setup,no,chemical_buffer_waste,pcr_additive_mineral_oil,JumpStart REDTaq ReadyMix (Demo 96-well)|Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well)
+Betaine,Betaine,pcr_additive_betaine,PCR,setup,no,chemical_buffer_waste,pcr_additive_betaine,JumpStart REDTaq ReadyMix (Demo 96-well)
+DMSO,DMSO,pcr_additive_dmso,PCR,setup,no,chemical_buffer_waste,pcr_additive_dmso,JumpStart REDTaq ReadyMix (Demo 96-well)

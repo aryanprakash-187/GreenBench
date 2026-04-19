@@ -1,0 +1,2 @@
+profile_name,sample_count_min,sample_count_default,sample_count_max,sample_count_increment,automation_required_if_samples_ge,common_batch_sizes,notes
+global_cleanup_demo,300,600,900,1,300,300|384|600|768|900,Automation mode. Any integer 300-900 should multiply reagent volumes by sample_count.

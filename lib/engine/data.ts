@@ -15,6 +15,7 @@ import type {
   EquipmentRow,
   EquipmentTermMapRow,
   OverlapRuleRow,
+  ProtocolEquipmentRequirementRow,
   ProtocolReagentRow,
   ProtocolSelectedRow,
   ProtocolThermalProfileRow,
@@ -117,10 +118,27 @@ export function loadEquipmentTermMap(): EquipmentTermMapRow[] {
   return _equipmentTermMap;
 }
 
+let _protocolEquipmentReqs: ProtocolEquipmentRequirementRow[] | null = null;
+export function loadProtocolEquipmentRequirements(): ProtocolEquipmentRequirementRow[] {
+  if (!_protocolEquipmentReqs) {
+    _protocolEquipmentReqs = readCsv<ProtocolEquipmentRequirementRow>(
+      'protocol_equipment_requirements.csv'
+    );
+  }
+  return _protocolEquipmentReqs;
+}
+
 // ----- EPA + impact JSON -----
 
+export interface EpaCasEntry {
+  cas: string;
+  name?: string;
+  role?: string;
+}
+
 interface EpaCacheLegacyEntry {
-  cas_numbers_involved?: string[];
+  /** Either an array of bare CAS strings (old format) or {cas,name,role} objects (new). */
+  cas_numbers_involved?: Array<string | EpaCasEntry>;
   epa_classification?: string;
   tri_reportable?: boolean | null;
   comptox_hazard_flags?: string[];
@@ -199,6 +217,7 @@ export function __resetCaches(): void {
   _overlapRules = null;
   _equipment = null;
   _equipmentTermMap = null;
+  _protocolEquipmentReqs = null;
   _operators = null;
   _epaCache = null;
   _impact = null;

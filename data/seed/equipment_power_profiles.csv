@@ -1,0 +1,6 @@
+power_profile_group,power_draw_kw_active,power_draw_kw_idle,run_duration_min_low,run_duration_min_high,grid_co2e_kg_per_kwh_mid,notes
+instrument_cycle,0.05,0.01,10,30,0.4,Mock/demo assumption for magnetic separators and passive cycle equipment.
+active_processing,0.9,0.18,25,90,0.4,Mock/demo assumption for standard common automated liquid handlers processing multi-plate cleanup batches.
+support_device,0.08,0.01,1,10,0.4,Mock/demo assumption for support devices; included to let power card show nonzero shared-equipment overlap.
+thermocycler_cycle,0.85,0.15,60,180,0.4,Mock thermocycler energy range for high-throughput PCR blocks.
+centrifuge_cycle,0.65,0.1,15,60,0.4,Mock plate centrifuge energy range for extraction runs.

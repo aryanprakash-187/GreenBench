@@ -95,7 +95,26 @@ export interface EquipmentTermMapRow {
   notes: string;
 }
 
+/** Rows from /data/seed/protocol_equipment_requirements.csv — the authoritative
+ *  mapping of protocol -> equipment needed (by lab catalog id). */
+export interface ProtocolEquipmentRequirementRow {
+  protocol_name: string;
+  equipment_type: string;
+  preferred_model_id: string;
+  required_yes_no: string;
+  batchable_yes_no: string;
+  samples_per_run_default: string;
+  run_duration_min_default: string;
+}
+
 // ----- Enriched (Layer 2) types — what the engine consumes -----
+
+/** Single CAS-identified chemical in a waste group. */
+export interface HazardCas {
+  cas: string;
+  name?: string;
+  role?: string;
+}
 
 /** EPA-derived hazard summary for one reagent, drawn from /data/epa_cache.json. */
 export interface ReagentHazardSummary {
@@ -112,6 +131,9 @@ export interface ReagentHazardSummary {
   classification_by_analogy: boolean;
   /** Citation URLs the UI renders inline next to recommendations / warnings. */
   sources: string[];
+  /** Specific CAS-identified chemicals in this waste group. Populated from
+   *  `cas_numbers_involved` in epa_cache.json; always an array (possibly empty). */
+  cas_entries: HazardCas[];
 }
 
 /** A single reagent inside a hydrated protocol, with everything the engine needs. */
@@ -285,6 +307,8 @@ export interface CoordinationCitation {
   reagent: string;
   rcra_code: string | null;
   sources: string[];
+  /** Specific CAS-identified chemicals that drive the hazard classification. */
+  cas_entries: HazardCas[];
 }
 
 export interface CoordinationSavings {
@@ -319,8 +343,13 @@ export interface Separation {
   pair: [string, string];
   severity: 'critical' | 'warning' | 'info' | 'check';
   reason: string;
-  /** RCRA codes + EPA URLs collected from epa_cache.json for either side. */
-  citations: { waste_group: string; rcra_code: string | null; sources: string[] }[];
+  /** RCRA codes + EPA URLs + CAS chemistry collected from epa_cache.json for either side. */
+  citations: {
+    waste_group: string;
+    rcra_code: string | null;
+    sources: string[];
+    cas_entries: HazardCas[];
+  }[];
 }
 
 export interface ImpactWeekly {

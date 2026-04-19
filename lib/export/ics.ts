@@ -116,17 +116,27 @@ function buildTaskVevent(args: {
   );
   descriptionParts.push(`Estimated duration: ${task.duration_min} min`);
 
-  if (task.shared_with.length > 0) {
-    descriptionParts.push(
-      `Shared with: ${task.shared_with.join(', ')}`
-    );
-  }
-
-  // Coordination prose (headline + savings) for any coordination this task
-  // participates in — gives the user the "why" without needing the app open.
+  // Coordinations this task participates in, surfaced as both a peer-list
+  // summary and per-coordination prose. We resolve each coordination's
+  // participants back to *person names* (not opaque task_ids) so the
+  // "Shared with:" line is actually human-readable in Google / Apple /
+  // Outlook calendar apps.
   const involved = plan.coordinations.filter((c) =>
     c.participants.some((p) => p.task_id === task.task_id)
   );
+
+  const peerNames = new Set<string>();
+  for (const c of involved) {
+    for (const p of c.participants) {
+      if (p.person !== task.person) peerNames.add(p.person);
+    }
+  }
+  if (peerNames.size > 0) {
+    descriptionParts.push(
+      `Shared with: ${Array.from(peerNames).join(', ')}`
+    );
+  }
+
   for (const c of involved) {
     descriptionParts.push('');
     descriptionParts.push(`Coordination: ${c.prose.headline}`);

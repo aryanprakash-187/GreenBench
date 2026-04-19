@@ -1,309 +1,211 @@
 {
   "reagents": {
-    "ethanol_96_100": {
+    "paramagnetic_cleanup_beads": {
       "co2e_kg_per_liter": {
-        "low": 1.2,
-        "mid": 1.9,
-        "high": 3.1
+        "low": 4.0,
+        "mid": 6.5,
+        "high": 9.5
+      },
+      "hazardous_disposal_cost_usd_per_liter": {
+        "low": 5,
+        "mid": 9,
+        "high": 16
+      },
+      "source": "Mock demo coefficient to make shared viscous bead prep materially visible."
+    },
+    "ethanol_wash_solution": {
+      "co2e_kg_per_liter": {
+        "low": 1.8,
+        "mid": 2.8,
+        "high": 4.5
       },
       "hazardous_disposal_cost_usd_per_liter": {
         "low": 2,
         "mid": 5,
-        "high": 10
-      },
-      "source_type": "order_of_magnitude_estimate"
-    },
-    "ethanol_50_solution": {
-      "co2e_kg_per_liter": {
-        "low": 0.6,
-        "mid": 1.0,
-        "high": 1.8
-      },
-      "hazardous_disposal_cost_usd_per_liter": {
-        "low": 1,
-        "mid": 3,
-        "high": 8
-      },
-      "source_type": "diluted_ethanol_estimate"
-    },
-    "ethanol_70_fresh": {
-      "co2e_kg_per_liter": {
-        "low": 0.9,
-        "mid": 1.5,
-        "high": 2.4
-      },
-      "hazardous_disposal_cost_usd_per_liter": {
-        "low": 2,
-        "mid": 4,
         "high": 9
       },
-      "source_type": "diluted_ethanol_estimate"
+      "source": "Mock solvent coefficient range for demo output."
     },
-    "isopropanol_100": {
+    "low_salt_elution": {
       "co2e_kg_per_liter": {
-        "low": 1.4,
-        "mid": 2.2,
-        "high": 3.6
-      },
-      "hazardous_disposal_cost_usd_per_liter": {
-        "low": 2,
-        "mid": 5,
-        "high": 11
-      },
-      "source_type": "order_of_magnitude_estimate"
-    },
-    "low_salt_elution_buffer": {
-      "co2e_kg_per_liter": {
-        "low": 0.02,
-        "mid": 0.05,
-        "high": 0.12
-      },
-      "hazardous_disposal_cost_usd_per_liter": {
-        "low": 0,
-        "mid": 0.5,
-        "high": 1
-      },
-      "source_type": "buffer_estimate"
-    },
-    "sterile_water": {
-      "co2e_kg_per_liter": {
-        "low": 0.001,
-        "mid": 0.005,
-        "high": 0.02
+        "low": 0.1,
+        "mid": 0.2,
+        "high": 0.4
       },
       "hazardous_disposal_cost_usd_per_liter": {
         "low": 0,
         "mid": 0,
-        "high": 0.2
-      },
-      "source_type": "water_estimate"
-    },
-    "te_buffer": {
-      "co2e_kg_per_liter": {
-        "low": 0.02,
-        "mid": 0.06,
-        "high": 0.15
-      },
-      "hazardous_disposal_cost_usd_per_liter": {
-        "low": 0,
-        "mid": 0.5,
         "high": 1
       },
-      "source_type": "buffer_estimate"
+      "source": "Mock low-impact aqueous coefficient range."
     },
-    "q5_master_mix": {
+    "cleanup_binding_buffer": {
       "co2e_kg_per_liter": {
-        "low": 20,
-        "mid": 40,
-        "high": 80
-      },
-      "hazardous_disposal_cost_usd_per_liter": {
-        "low": 5,
-        "mid": 10,
-        "high": 20
-      },
-      "source_type": "enzyme_mix_estimate"
-    },
-    "platinum_ii_master_mix": {
-      "co2e_kg_per_liter": {
-        "low": 20,
-        "mid": 40,
-        "high": 80
-      },
-      "hazardous_disposal_cost_usd_per_liter": {
-        "low": 5,
-        "mid": 10,
-        "high": 20
-      },
-      "source_type": "enzyme_mix_estimate"
-    },
-    "jumpstart_redtaq_readymix": {
-      "co2e_kg_per_liter": {
-        "low": 20,
-        "mid": 40,
-        "high": 80
-      },
-      "hazardous_disposal_cost_usd_per_liter": {
-        "low": 5,
-        "mid": 10,
-        "high": 20
-      },
-      "source_type": "enzyme_mix_estimate"
-    },
-    "binding_mix_magjet_ngs": {
-      "co2e_kg_per_liter": {
-        "low": 2,
-        "mid": 4,
-        "high": 8
-      },
-      "hazardous_disposal_cost_usd_per_liter": {
-        "low": 3,
-        "mid": 6,
-        "high": 12
-      },
-      "source_type": "mixed_buffer_solvent_estimate"
-    },
-    "wash_solution_magjet_ngs": {
-      "co2e_kg_per_liter": {
-        "low": 0.5,
-        "mid": 1.0,
-        "high": 2.0
+        "low": 0.9,
+        "mid": 1.6,
+        "high": 2.6
       },
       "hazardous_disposal_cost_usd_per_liter": {
         "low": 1,
         "mid": 3,
-        "high": 8
+        "high": 6
       },
-      "source_type": "wash_solution_estimate"
+      "source": "Mock binding-buffer coefficient range."
     },
-    "proteinase_k_solution": {
+    "shared_prep_buffer": {
       "co2e_kg_per_liter": {
-        "low": 10,
-        "mid": 25,
-        "high": 50
+        "low": 0.8,
+        "mid": 1.4,
+        "high": 2.3
+      },
+      "hazardous_disposal_cost_usd_per_liter": {
+        "low": 1,
+        "mid": 3,
+        "high": 6
+      },
+      "source": "Demo-only coefficient for visible shared buffer prep savings."
+    },
+    "pcr_master_mix": {
+      "co2e_kg_per_liter": {
+        "low": 8.0,
+        "mid": 14.0,
+        "high": 22.0
+      },
+      "hazardous_disposal_cost_usd_per_liter": {
+        "low": 6,
+        "mid": 12,
+        "high": 20
+      },
+      "source": "Demo-only high-value coefficient to make shared PCR prep visibly impactful."
+    },
+    "primer_mix": {
+      "co2e_kg_per_liter": {
+        "low": 10.0,
+        "mid": 18.0,
+        "high": 28.0
+      },
+      "hazardous_disposal_cost_usd_per_liter": {
+        "low": 5,
+        "mid": 10,
+        "high": 18
+      },
+      "source": "Demo-only coefficient for shared oligo prep visibility."
+    },
+    "dna_template_pool": {
+      "co2e_kg_per_liter": {
+        "low": 4.0,
+        "mid": 7.0,
+        "high": 11.0
       },
       "hazardous_disposal_cost_usd_per_liter": {
         "low": 2,
         "mid": 5,
-        "high": 10
+        "high": 9
       },
-      "source_type": "enzyme_solution_estimate"
+      "source": "Demo-only coefficient for template pooling."
     },
-    "rnase_a_solution": {
+    "enzyme_mix_prep": {
       "co2e_kg_per_liter": {
-        "low": 10,
-        "mid": 25,
-        "high": 50
+        "low": 12.0,
+        "mid": 20.0,
+        "high": 30.0
       },
       "hazardous_disposal_cost_usd_per_liter": {
-        "low": 2,
-        "mid": 5,
-        "high": 10
+        "low": 6,
+        "mid": 12,
+        "high": 20
       },
-      "source_type": "enzyme_solution_estimate"
+      "source": "Demo-only coefficient for enzyme prep overlap."
     }
   },
   "consumables": {
-    "spin_column": {
+    "plate_96well": {
       "co2e_kg_per_item": {
-        "low": 0.01,
-        "mid": 0.02,
-        "high": 0.04
+        "low": 0.02,
+        "mid": 0.04,
+        "high": 0.06
       },
-      "plastic_g": {
-        "low": 5,
-        "mid": 8,
-        "high": 12
-      }
+      "source": "Mock per-plate footprint"
     },
-    "microcentrifuge_tube": {
+    "plate_384well": {
       "co2e_kg_per_item": {
-        "low": 0.0008,
-        "mid": 0.0015,
-        "high": 0.003
+        "low": 0.03,
+        "mid": 0.05,
+        "high": 0.08
       },
-      "plastic_g": {
-        "low": 0.6,
-        "mid": 1.0,
+      "source": "Mock per-plate footprint"
+    },
+    "deep_well_plate": {
+      "co2e_kg_per_item": {
+        "low": 0.04,
+        "mid": 0.07,
+        "high": 0.1
+      },
+      "source": "Mock per-plate footprint"
+    },
+    "pipette_tips": {
+      "co2e_kg_per_item": {
+        "low": 5e-05,
+        "mid": 9e-05,
+        "high": 0.00014
+      },
+      "source": "Mock per-tip footprint"
+    },
+    "plate_seal": {
+      "co2e_kg_per_item": {
+        "low": 0.002,
+        "mid": 0.004,
+        "high": 0.006
+      },
+      "source": "Mock per-seal footprint"
+    }
+  },
+  "equipment_energy": {
+    "grid_co2e_kg_per_kwh": {
+      "low": 0.25,
+      "mid": 0.4,
+      "high": 0.6
+    },
+    "liquid_handler": {
+      "cycle_kwh_per_run": {
+        "low": 0.45,
+        "mid": 0.9,
         "high": 1.5
-      }
-    },
-    "collection_tube": {
-      "co2e_kg_per_item": {
-        "low": 0.001,
-        "mid": 0.002,
-        "high": 0.004
       },
-      "plastic_g": {
-        "low": 1.0,
-        "mid": 1.5,
-        "high": 2.5
-      }
+      "source": "Mock standard common liquid-handler range for 300-900 sample cleanup blocks."
     },
-    "pcr_tube": {
-      "co2e_kg_per_item": {
-        "low": 0.0008,
-        "mid": 0.0015,
-        "high": 0.003
-      },
-      "plastic_g": {
-        "low": 0.3,
-        "mid": 0.6,
-        "high": 1.0
-      }
-    },
-    "pcr_plate": {
-      "co2e_kg_per_item": {
+    "magnetic_separator": {
+      "cycle_kwh_per_run": {
         "low": 0.02,
         "mid": 0.05,
         "high": 0.1
       },
-      "plastic_g": {
-        "low": 8,
-        "mid": 15,
-        "high": 25
-      }
+      "source": "Mock passive/low-power magnetic separation cycle range."
     },
-    "deep_well_plate": {
-      "co2e_kg_per_item": {
-        "low": 0.03,
-        "mid": 0.07,
-        "high": 0.14
-      },
-      "plastic_g": {
-        "low": 15,
-        "mid": 25,
-        "high": 40
-      }
-    },
-    "plate_seal": {
-      "co2e_kg_per_item": {
-        "low": 0.0005,
-        "mid": 0.001,
-        "high": 0.002
-      },
-      "plastic_g": {
-        "low": 0.2,
-        "mid": 0.5,
-        "high": 1.0
-      }
-    },
-    "pipette_tips": {
-      "co2e_kg_per_item": {
-        "low": 0.0004,
-        "mid": 0.0008,
-        "high": 0.0015
-      },
-      "plastic_g": {
-        "low": 0.15,
-        "mid": 0.3,
-        "high": 0.6
-      }
-    },
-    "automation_strip": {
-      "co2e_kg_per_item": {
-        "low": 0.002,
-        "mid": 0.004,
-        "high": 0.008
-      },
-      "plastic_g": {
-        "low": 1.0,
-        "mid": 2.0,
-        "high": 4.0
-      }
-    },
-    "automation_plate": {
-      "co2e_kg_per_item": {
+    "plate_sealer": {
+      "cycle_kwh_per_run": {
         "low": 0.03,
         "mid": 0.06,
         "high": 0.12
       },
-      "plastic_g": {
-        "low": 12,
-        "mid": 22,
-        "high": 35
-      }
+      "source": "Mock shared plate-sealing cycle range."
+    },
+    "thermocycler": {
+      "cycle_kwh_per_run": {
+        "low": 0.8,
+        "mid": 1.4,
+        "high": 2.2
+      },
+      "source": "Demo-only thermocycler cycle range."
+    },
+    "centrifuge": {
+      "cycle_kwh_per_run": {
+        "low": 0.15,
+        "mid": 0.35,
+        "high": 0.6
+      },
+      "source": "Demo-only centrifuge cycle range."
     }
   },
-  "notes": "Hackathon-only low/mid/high ranges for environmental impact ranking. Replace with My Green Lab / ACT / EPD data if available."
+  "notes": "All coefficients are mock/demo assumptions for visible impact output. They are not publication-grade life-cycle values."
 }

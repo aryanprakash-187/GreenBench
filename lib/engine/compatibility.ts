@@ -126,10 +126,23 @@ function citationForGroup(
 ) {
   const entry = epa[group];
   if (!entry) return null;
+  const casEntries: { cas: string; name?: string; role?: string }[] = [];
+  for (const item of entry.cas_numbers_involved ?? []) {
+    if (typeof item === 'string') {
+      if (item.trim()) casEntries.push({ cas: item.trim() });
+    } else if (item && typeof item.cas === 'string' && item.cas.trim()) {
+      casEntries.push({
+        cas: item.cas.trim(),
+        ...(item.name ? { name: item.name } : {}),
+        ...(item.role ? { role: item.role } : {}),
+      });
+    }
+  }
   return {
     waste_group: group,
     rcra_code: entry.rcra_code ?? null,
     sources: entry.sources ?? [],
+    cas_entries: casEntries,
   };
 }
 

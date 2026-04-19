@@ -1,0 +1,44 @@
+protocol_name,equipment_type,preferred_model_id,required_yes_no,batchable_yes_no,samples_per_run_default,run_duration_min_default
+Agencourt AMPure XP PCR Purification (96-well),magnetic_separator,magsep-96-1,yes,yes,96,35
+Agencourt AMPure XP PCR Purification (96-well),liquid_handler,biomek-i5-1,yes,yes,384,45
+Agencourt AMPure XP PCR Purification (96-well),plate_sealer,plate-sealer-1,yes,yes,384,10
+Agencourt AMPure XP PCR Purification (384-well),magnetic_separator,magsep-384-1,yes,yes,384,25
+Agencourt AMPure XP PCR Purification (384-well),liquid_handler,biomek-i7-1,yes,yes,768,35
+Agencourt AMPure XP PCR Purification (384-well),plate_sealer,plate-sealer-1,yes,yes,768,10
+KAPA Pure Beads Genomic DNA Cleanup (3X),magnetic_separator,magsep-96-1,yes,yes,96,40
+KAPA Pure Beads Genomic DNA Cleanup (3X),liquid_handler,hamilton-star-1,yes,yes,384,55
+KAPA Pure Beads Genomic DNA Cleanup (3X),plate_sealer,plate-sealer-1,yes,yes,384,10
+KAPA Pure Beads Dual Size Selection (0.6X/0.8X),magnetic_separator,magsep-96-1,yes,yes,96,50
+KAPA Pure Beads Dual Size Selection (0.6X/0.8X),liquid_handler,hamilton-star-1,yes,yes,384,70
+KAPA Pure Beads Dual Size Selection (0.6X/0.8X),plate_sealer,plate-sealer-1,yes,yes,384,10
+KAPA HyperPure Beads Genomic DNA Cleanup (3X),magnetic_separator,magsep-96-1,yes,yes,96,40
+KAPA HyperPure Beads Genomic DNA Cleanup (3X),liquid_handler,hamilton-star-1,yes,yes,384,55
+KAPA HyperPure Beads Genomic DNA Cleanup (3X),plate_sealer,plate-sealer-1,yes,yes,384,10
+MagJET NGS Cleanup Protocol A,magnetic_separator,magsep-96-1,yes,yes,96,45
+MagJET NGS Cleanup Protocol A,liquid_handler,kingfisher-flex-1,yes,yes,384,60
+MagJET NGS Cleanup Protocol A,plate_sealer,plate-sealer-1,yes,yes,384,10
+MagJET NGS Adapter Removal Protocol B,magnetic_separator,magsep-96-1,yes,yes,96,55
+MagJET NGS Adapter Removal Protocol B,liquid_handler,kingfisher-flex-1,yes,yes,384,80
+MagJET NGS Adapter Removal Protocol B,plate_sealer,plate-sealer-1,yes,yes,384,10
+NucleoMag NGS Single Cleanup (1.0X),magnetic_separator,magsep-96-1,yes,yes,96,40
+NucleoMag NGS Single Cleanup (1.0X),liquid_handler,hamilton-star-1,yes,yes,384,55
+NucleoMag NGS Single Cleanup (1.0X),plate_sealer,plate-sealer-1,yes,yes,384,10
+Select-a-Size Left-Sided Cleanup (300 bp peak),magnetic_separator,magsep-96-1,yes,yes,96,35
+Select-a-Size Left-Sided Cleanup (300 bp peak),liquid_handler,hamilton-star-1,yes,yes,384,45
+Select-a-Size Left-Sided Cleanup (300 bp peak),plate_sealer,plate-sealer-1,yes,yes,384,10
+DNeasy 96 Blood & Tissue (Demo 96-well),centrifuge,centrifuge-plate-1,yes,yes,192,70
+DNeasy 96 Blood & Tissue (Demo 96-well),liquid_handler,qiacube-1,yes,yes,48,40
+GeneJET Genomic DNA Purification (Demo high-throughput),centrifuge,centrifuge-plate-1,yes,yes,192,60
+GeneJET Genomic DNA Purification (Demo high-throughput),liquid_handler,hamilton-star-1,yes,yes,384,50
+GeneJET Genomic DNA Purification (Demo high-throughput),thermomixer,thermomixer-1,yes,yes,96,30
+MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96),liquid_handler,kingfisher-flex-1,yes,yes,384,75
+MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96),magnetic_separator,magsep-96-1,yes,yes,96,45
+Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well),thermocycler,thermo-c1000-a,yes,yes,384,120
+Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well),liquid_handler,hamilton-star-1,yes,yes,384,35
+Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well),plate_sealer,plate-sealer-1,yes,yes,384,10
+Platinum II Hot-Start Green PCR Master Mix (Demo 96-well),thermocycler,thermo-c1000-a,yes,yes,384,120
+Platinum II Hot-Start Green PCR Master Mix (Demo 96-well),liquid_handler,hamilton-star-1,yes,yes,384,35
+Platinum II Hot-Start Green PCR Master Mix (Demo 96-well),plate_sealer,plate-sealer-1,yes,yes,384,10
+JumpStart REDTaq ReadyMix (Demo 96-well),thermocycler,thermo-c1000-a,yes,yes,384,135
+JumpStart REDTaq ReadyMix (Demo 96-well),liquid_handler,hamilton-star-1,yes,yes,384,35
+JumpStart REDTaq ReadyMix (Demo 96-well),plate_sealer,plate-sealer-1,yes,yes,384,10

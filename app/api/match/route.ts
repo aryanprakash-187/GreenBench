@@ -80,15 +80,19 @@ export async function POST(req: NextRequest) {
         mimeType === 'application/pdf' ||
         /\.pdf$/i.test(filename)
       ) {
-        // Best-effort PDF text extraction. Failures (encrypted PDFs, all-image
-        // scans, malformed files) are non-fatal — we just fall through to the
-        // LLM tier with the raw bytes, same as before.
+        // Best-effort PDF text extraction. When it works, drop raw bytes and
+        // hand the LLM the text excerpt instead.
         const extracted = await extractPdfTextSample(bytes, PDF_TEXT_CHAR_BUDGET);
         if (extracted && extracted.trim().length > 0) {
           textSample = extracted;
-          // Once we have text, drop the raw bytes — sending both is wasteful
-          // and the LLM tier's userBlock prefers text_sample anyway.
           fileBytes = undefined;
+        } else {
+          // Extraction failed (scanned/image-only, encrypted, or malformed).
+          // Sending these raw bytes to Gemini triggers "400 Bad Request: The
+          // document has no pages." Instead, drop the bytes and give the LLM
+          // a filename-only hint so it can still take a best-effort guess.
+          fileBytes = undefined;
+          textSample = `(No extractable text from PDF "${filename}" — file may be scanned/image-only or encrypted. Infer the protocol from the filename alone.)`;
         }
       }
 

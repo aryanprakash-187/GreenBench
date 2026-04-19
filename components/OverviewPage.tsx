@@ -10,7 +10,6 @@ import {
   type Submission,
 } from "@/lib/submission";
 import type {
-  ImpactWeekly,
   NarratedCoordination,
   NarratedSeparation,
   NarratedWeekPlanResult,
@@ -28,7 +27,6 @@ export default function OverviewPage({ onBack, onNext }: OverviewPageProps = {})
   const [loadState, setLoadState] = useState<"loading" | "ok" | "missing">(
     "loading",
   );
-  const [annualized, setAnnualized] = useState(false);
 
   const handleNext = onNext ?? (() => router.push("/schedules"));
 
@@ -93,12 +91,7 @@ export default function OverviewPage({ onBack, onNext }: OverviewPageProps = {})
 
         {plan && loadState === "ok" && (
           <>
-            <ImpactSummarySection
-              plan={plan}
-              labelName={labelName}
-              annualized={annualized}
-              onToggleAnnualized={() => setAnnualized((v) => !v)}
-            />
+            <ImpactSummarySection plan={plan} labelName={labelName} />
 
             <SectionCard
               eyebrow="Coordination recommendations"
@@ -222,17 +215,44 @@ function EmptyCard({ title, body }: { title: string; body: string }) {
 function ImpactSummarySection({
   plan,
   labelName,
-  annualized,
-  onToggleAnnualized,
 }: {
   plan: NarratedWeekPlanResult;
   labelName: string;
-  annualized: boolean;
-  onToggleAnnualized: () => void;
 }) {
-  const impact: ImpactWeekly = annualized
-    ? plan.impact.annualized_if_repeated
-    : plan.impact.weekly;
+  const wk = plan.impact.weekly;
+  const yr = plan.impact.annualized_if_repeated;
+
+  const rows: {
+    label: string;
+    weekly: string;
+    annual: string;
+  }[] = [
+    {
+      label: "Reagent volume saved",
+      weekly: `${formatNumber(wk.reagent_volume_saved_ml)} mL`,
+      annual: `${formatNumber(yr.reagent_volume_saved_ml)} mL`,
+    },
+    {
+      label: "Prep events consolidated",
+      weekly: `${formatNumber(wk.prep_events_saved)}`,
+      annual: `${formatNumber(yr.prep_events_saved)}`,
+    },
+    {
+      label: "Equipment runs saved",
+      weekly: `${formatNumber(wk.equipment_runs_saved)}`,
+      annual: `${formatNumber(yr.equipment_runs_saved)}`,
+    },
+    {
+      label: "CO₂e range",
+      weekly: `${wk.estimated_co2e_kg_range[0].toFixed(1)}–${wk.estimated_co2e_kg_range[1].toFixed(1)} kg`,
+      annual: `${yr.estimated_co2e_kg_range[0].toFixed(1)}–${yr.estimated_co2e_kg_range[1].toFixed(1)} kg`,
+    },
+    {
+      label: "Hazardous disposal events avoided",
+      weekly: `${formatNumber(wk.hazardous_disposal_events_avoided)}`,
+      annual: `${formatNumber(yr.hazardous_disposal_events_avoided)}`,
+    },
+  ];
 
   return (
     <section className="relative overflow-hidden rounded-3xl border border-forest-700/10 bg-gradient-to-br from-forest-700 via-forest-600 to-ocean-700 p-8 text-sand-50 shadow-soft md:p-10">
@@ -240,44 +260,43 @@ function ImpactSummarySection({
         aria-hidden
         className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-moss-300/20 blur-3xl"
       />
-      <div className="relative flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.25em] text-sand-100/70">
-            Impact summary · {annualized ? "Annualized (×52)" : "This week"}
-          </p>
-          <h2 className="mt-1 font-display text-3xl font-semibold md:text-4xl">
-            Coordinating {labelName} lab saves real waste.
-          </h2>
+      <div className="relative">
+        <p className="text-[10px] uppercase tracking-[0.25em] text-sand-100/70">
+          Impact summary
+        </p>
+        <h2 className="mt-1 font-display text-3xl font-semibold md:text-4xl">
+          Coordinating {labelName} lab saves real waste.
+        </h2>
+      </div>
+
+      <div className="relative mt-8 overflow-hidden rounded-2xl border border-sand-100/15 bg-forest-900/20 backdrop-blur-sm">
+        <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-6 gap-y-3 px-5 py-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-sand-100/70 md:px-6">
+          <span>Metric</span>
+          <span className="text-right">This week</span>
+          <span className="text-right">Annualized (×52)</span>
         </div>
-        <button
-          onClick={onToggleAnnualized}
-          className="spin-light shrink-0 rounded-full bg-forest-800/80 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-sand-50 backdrop-blur transition hover:bg-forest-700"
-        >
-          {annualized ? "Weekly" : "Annualized"}
-        </button>
+        <div className="divide-y divide-sand-100/10">
+          {rows.map((r) => (
+            <div
+              key={r.label}
+              className="grid grid-cols-[1fr_auto_auto] items-baseline gap-x-6 px-5 py-3 md:px-6"
+            >
+              <span className="text-sm text-sand-50/90">{r.label}</span>
+              <span className="text-right font-display text-xl font-semibold tabular-nums leading-none md:text-2xl">
+                {r.weekly}
+              </span>
+              <span className="text-right font-display text-xl font-semibold tabular-nums leading-none text-moss-200 md:text-2xl">
+                {r.annual}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="relative mt-8 grid gap-6 md:grid-cols-4">
-        <Metric
-          big={`${formatNumber(impact.reagent_volume_saved_ml)} mL`}
-          label="Reagent volume saved"
-        />
-        <Metric
-          big={`${formatNumber(impact.prep_events_saved)}`}
-          label="Prep events consolidated"
-        />
-        <Metric
-          big={`${formatNumber(impact.equipment_runs_saved)}`}
-          label="Equipment runs saved"
-        />
-        <Metric
-          big={`${impact.estimated_co2e_kg_range[0].toFixed(1)}–${impact.estimated_co2e_kg_range[1].toFixed(1)} kg`}
-          label="CO₂e range"
-        />
-      </div>
-      <p className="relative mt-6 text-[11px] uppercase tracking-[0.18em] text-sand-100/55">
-        Hazardous disposal events avoided:{" "}
-        {formatNumber(impact.hazardous_disposal_events_avoided)}
+
+      <p className="relative mt-4 text-[11px] text-sand-100/55">
+        Annualized column assumes this same week repeats 52×. Weekly is what your lab actually saves Mon–Fri.
       </p>
+
       {!plan.narration.generated && plan.narration.fallback_reason && (
         <p className="relative mt-3 text-[11px] uppercase tracking-[0.16em] text-sand-100/55">
           Narration fallback: {plan.narration.fallback_reason}
@@ -287,30 +306,15 @@ function ImpactSummarySection({
   );
 }
 
-function Metric({ big, label }: { big: string; label: string }) {
-  return (
-    <div>
-      <p className="font-display text-3xl font-semibold leading-none md:text-4xl">
-        {big}
-      </p>
-      <p className="mt-2 text-[11px] uppercase tracking-[0.2em] text-sand-100/70">
-        {label}
-      </p>
-    </div>
-  );
-}
-
 /* ---------- Recommendations ---------- */
 
 function RecommendationCard({ coord }: { coord: NarratedCoordination }) {
-  const [showRationale, setShowRationale] = useState(false);
-  const [showCitations, setShowCitations] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   const accent: "moss" | "ocean" =
     coord.type === "shared_reagent_prep" ? "moss" : "ocean";
   const stripe = accent === "moss" ? "bg-moss-500" : "bg-ocean-400";
 
-  // Rough impact bucket inferred from savings.
   const impact = bucketImpact(coord);
   const impactCls =
     impact === "High"
@@ -319,11 +323,14 @@ function RecommendationCard({ coord }: { coord: NarratedCoordination }) {
       ? "bg-ocean-100 text-ocean-700"
       : "bg-sand-200 text-clay-600";
 
+  const people = Array.from(new Set(coord.participants.map((p) => p.person)));
+  const savingsChips = buildSavingsChips(coord);
+
   return (
     <article className="relative overflow-hidden rounded-2xl border border-forest-700/10 bg-white/85 p-5 md:p-6">
       <div className={`absolute left-0 top-0 h-full w-1.5 ${stripe}`} />
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <h4 className="font-display text-lg font-semibold text-forest-800 md:text-xl">
+        <h4 className="font-display text-base font-semibold leading-snug text-forest-800 md:text-lg">
           {coord.prose.headline || coord.recommendation}
         </h4>
         <div className="flex items-center gap-2">
@@ -334,100 +341,208 @@ function RecommendationCard({ coord }: { coord: NarratedCoordination }) {
           </span>
           {!coord.aligned && (
             <span className="rounded-full bg-clay-400/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-clay-700">
-              Not aligned
+              Advisory
             </span>
           )}
         </div>
       </div>
-      <p className="mt-2 text-sm leading-relaxed text-forest-800/75">
-        {coord.prose.body}
-      </p>
-      <p className="mt-3 text-xs font-medium text-moss-700">
-        {coord.prose.savings_phrase}
-      </p>
 
-      <div className="mt-4 flex flex-wrap gap-2 text-xs">
-        <button
-          onClick={() => setShowRationale((v) => !v)}
-          className="rounded-full border border-forest-700/15 bg-white px-3 py-1 font-medium text-forest-800 transition hover:bg-forest-700 hover:text-sand-50"
-        >
-          {showRationale ? "Hide rationale" : "Show rationale"}
-        </button>
-        {coord.citations.length > 0 && (
-          <button
-            onClick={() => setShowCitations((v) => !v)}
-            className="rounded-full border border-forest-700/15 bg-white px-3 py-1 font-medium text-forest-800 transition hover:bg-forest-700 hover:text-sand-50"
-          >
-            {showCitations ? "Hide EPA citations" : `EPA citations (${coord.citations.length})`}
-          </button>
-        )}
-      </div>
+      {coord.prose.body && (
+        <p className="mt-2 text-sm leading-relaxed text-forest-800/80">
+          {coord.prose.body}
+        </p>
+      )}
 
-      {showRationale && (
-        <div className="mt-4 rounded-xl bg-forest-700/5 p-4 text-xs text-forest-800/80">
-          <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-forest-800/55">
-            Engine rationale
-          </p>
-          <ul className="list-disc space-y-1 pl-4">
-            {coord.rationale.map((r, i) => (
-              <li key={i}>{r}</li>
-            ))}
-          </ul>
-          <p className="mt-3 text-[10px] uppercase tracking-[0.2em] text-forest-800/55">
-            Participants
-          </p>
-          <ul className="mt-1 space-y-1 font-mono">
-            {coord.participants.map((p, i) => (
-              <li key={i}>
-                {p.person} · <span className="text-forest-800/55">{p.task_id}</span>
-                {typeof p.volume_ul === "number" && (
-                  <span className="text-forest-800/55">
-                    {" "}
-                    · {p.volume_ul} µL
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
+      {savingsChips.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {savingsChips.map((chip, i) => (
+            <span
+              key={i}
+              className="rounded-full bg-moss-100 px-2.5 py-1 text-[11px] font-medium text-moss-700"
+            >
+              {chip}
+            </span>
+          ))}
         </div>
       )}
-      {showCitations && (
-        <div className="mt-3 rounded-xl bg-ocean-100/40 p-4 text-xs text-forest-800/80">
-          <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-forest-800/55">
-            EPA citations
-          </p>
-          <ul className="space-y-2">
-            {coord.citations.map((cite, i) => (
-              <li key={i}>
-                <span className="font-mono text-clay-600">{cite.reagent}</span>
-                {cite.rcra_code && (
-                  <span className="ml-2 rounded bg-clay-400/20 px-1.5 py-0.5 font-mono text-[10px] text-clay-700">
-                    RCRA {cite.rcra_code}
-                  </span>
-                )}
-                {cite.sources.length > 0 && (
-                  <ul className="mt-1 space-y-0.5">
-                    {cite.sources.map((s, j) => (
-                      <li key={j}>
-                        <a
-                          href={s}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-ocean-700 underline decoration-ocean-400/40 underline-offset-2 hover:decoration-ocean-700"
-                        >
-                          {s}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ul>
+
+      {people.length > 0 && (
+        <p className="mt-3 text-xs text-forest-800/60">
+          <span className="font-semibold text-forest-800/75">Covers:</span>{" "}
+          {people.join(" · ")}
+        </p>
+      )}
+
+      <button
+        onClick={() => setShowDetails((v) => !v)}
+        className="mt-4 text-xs font-medium text-forest-800/70 underline decoration-forest-800/25 underline-offset-4 transition hover:text-forest-800 hover:decoration-forest-800"
+      >
+        {showDetails ? "Hide details" : "Show engine rationale & EPA citations"}
+      </button>
+
+      {showDetails && (
+        <div className="mt-3 space-y-4 rounded-xl bg-forest-700/5 p-4 text-xs text-forest-800/80">
+          {coord.rationale.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-forest-800/55">
+                Engine rationale
+              </p>
+              <ul className="list-disc space-y-1 pl-4 leading-relaxed">
+                {coord.rationale.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {coord.participants.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-forest-800/55">
+                Participants
+              </p>
+              <ul className="space-y-1">
+                {coord.participants.map((p, i) => (
+                  <li key={i} className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="font-medium">{p.person}</span>
+                    <span className="font-mono text-[11px] text-forest-800/55">
+                      {shortTaskId(p.task_id)}
+                    </span>
+                    {typeof p.volume_ul === "number" && (
+                      <span className="text-forest-800/55">
+                        · {(p.volume_ul / 1000).toFixed(1)} mL
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {coord.citations.length > 0 && (
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-forest-800/55">
+                EPA citations
+              </p>
+              <ul className="space-y-3">
+                {coord.citations.map((cite, i) => (
+                  <CitationItem key={i} cite={cite} />
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </article>
   );
+}
+
+function CitationItem({
+  cite,
+}: {
+  cite: NarratedCoordination["citations"][number];
+}) {
+  const nonCasSources = cite.sources.filter(
+    (s) => !/[?&]search=\d/.test(s) && !/CASRN\/\d/.test(s)
+  );
+  return (
+    <li className="rounded-lg border border-ocean-400/20 bg-white/70 p-3">
+      <div className="flex flex-wrap items-baseline gap-2">
+        <span className="font-medium text-forest-800">{cite.reagent}</span>
+        {cite.rcra_code && (
+          <span className="rounded bg-clay-400/20 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-clay-700">
+            RCRA {cite.rcra_code}
+          </span>
+        )}
+      </div>
+      {cite.cas_entries.length > 0 && (
+        <ul className="mt-2 space-y-0.5">
+          {cite.cas_entries.map((cas, j) => (
+            <li key={j} className="text-[11px] leading-snug">
+              <a
+                href={`https://comptox.epa.gov/dashboard/chemical/details/search?search=${encodeURIComponent(
+                  cas.cas,
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono font-semibold text-ocean-700 underline decoration-ocean-400/40 underline-offset-2 hover:decoration-ocean-700"
+              >
+                CAS {cas.cas}
+              </a>
+              {cas.name && (
+                <span className="text-forest-800/75"> · {cas.name}</span>
+              )}
+              {cas.role && (
+                <span className="text-forest-800/55"> ({cas.role})</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {nonCasSources.length > 0 && (
+        <ul className="mt-2 space-y-0.5 text-[10px] text-forest-800/55">
+          {nonCasSources.map((s, j) => (
+            <li key={j}>
+              <a
+                href={s}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline decoration-forest-800/25 underline-offset-2 hover:decoration-forest-800"
+              >
+                {prettySourceLabel(s)}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+}
+
+function prettySourceLabel(url: string): string {
+  if (/defining-characteristic-ignitability/.test(url))
+    return "EPA · RCRA ignitability (D001) characteristic";
+  if (/defining-hazardous-waste/.test(url))
+    return "EPA · Defining hazardous waste (RCRA framework)";
+  return url;
+}
+
+function shortTaskId(taskId: string): string {
+  const parts = taskId.split("__");
+  return parts.length >= 2 ? parts[1] : taskId;
+}
+
+function buildSavingsChips(coord: NarratedCoordination): string[] {
+  const out: string[] = [];
+  const s = coord.savings;
+  if (typeof s.volume_ml === "number" && s.volume_ml > 0) {
+    out.push(`−${formatNumber(s.volume_ml)} mL reagent`);
+  }
+  if (typeof s.prep_events_saved === "number" && s.prep_events_saved > 0) {
+    out.push(
+      `${s.prep_events_saved} prep event${s.prep_events_saved === 1 ? "" : "s"} avoided`,
+    );
+  }
+  if (typeof s.runs_saved === "number" && s.runs_saved > 0) {
+    out.push(
+      `${s.runs_saved} equipment run${s.runs_saved === 1 ? "" : "s"} saved`,
+    );
+  }
+  if (
+    typeof s.hazardous_disposal_events_avoided === "number" &&
+    s.hazardous_disposal_events_avoided > 0
+  ) {
+    out.push(
+      `${s.hazardous_disposal_events_avoided} haz-waste event${
+        s.hazardous_disposal_events_avoided === 1 ? "" : "s"
+      } avoided`,
+    );
+  }
+  if (s.co2e_kg_range && (s.co2e_kg_range[0] > 0 || s.co2e_kg_range[1] > 0)) {
+    out.push(
+      `~${s.co2e_kg_range[0].toFixed(1)}–${s.co2e_kg_range[1].toFixed(1)} kg CO₂e`,
+    );
+  }
+  return out;
 }
 
 function bucketImpact(c: NarratedCoordination): "High" | "Medium" | "Low" {
@@ -515,26 +630,43 @@ function WarningCard({ sep }: { sep: NarratedSeparation }) {
             {sep.prose.body}
           </p>
           {sep.citations.length > 0 && (
-            <div className="mt-3 space-y-1 text-[11px] text-clay-700/75">
+            <div className="mt-3 space-y-2">
               {sep.citations.map((c, i) => (
-                <div key={i}>
-                  <span className="font-mono">{c.waste_group}</span>
-                  {c.rcra_code && (
-                    <span className="ml-2 rounded bg-clay-400/20 px-1.5 py-0.5 font-mono text-[10px]">
-                      RCRA {c.rcra_code}
+                <div
+                  key={i}
+                  className="rounded-lg border border-clay-400/20 bg-white/70 p-2.5 text-[11px] text-clay-700/85"
+                >
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <span className="font-mono font-medium">
+                      {c.waste_group}
                     </span>
+                    {c.rcra_code && (
+                      <span className="rounded bg-clay-400/20 px-1.5 py-0.5 font-mono text-[10px] font-semibold">
+                        RCRA {c.rcra_code}
+                      </span>
+                    )}
+                  </div>
+                  {c.cas_entries.length > 0 && (
+                    <ul className="mt-1.5 space-y-0.5">
+                      {c.cas_entries.map((cas, j) => (
+                        <li key={j}>
+                          <a
+                            href={`https://comptox.epa.gov/dashboard/chemical/details/search?search=${encodeURIComponent(
+                              cas.cas,
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-mono font-semibold text-ocean-700 underline decoration-ocean-400/40 underline-offset-2 hover:decoration-ocean-700"
+                          >
+                            CAS {cas.cas}
+                          </a>
+                          {cas.name && (
+                            <span className="text-clay-700/75"> · {cas.name}</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
                   )}
-                  {c.sources.slice(0, 2).map((s, j) => (
-                    <a
-                      key={j}
-                      href={s}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ml-2 text-ocean-700 underline decoration-ocean-400/40 underline-offset-2 hover:decoration-ocean-700"
-                    >
-                      source {j + 1}
-                    </a>
-                  ))}
                 </div>
               ))}
             </div>

@@ -26,6 +26,7 @@ import {
   loadEquipmentTermMap,
   loadImpactCoefficients,
   loadOverlapRules,
+  loadProtocolEquipmentRequirements,
   loadProtocolReagents,
   loadProtocols,
   loadReagentStability,
@@ -211,7 +212,30 @@ function findHazard(epaLookupKey: string): ReagentHazardSummary | null {
     comptox_hazard_flags: entry.comptox_hazard_flags ?? [],
     classification_by_analogy: entry.classification_by_analogy ?? false,
     sources: entry.sources ?? [],
+    cas_entries: normalizeCasEntries(entry.cas_numbers_involved),
   };
+}
+
+function normalizeCasEntries(
+  raw: Array<string | { cas: string; name?: string; role?: string }> | undefined
+): { cas: string; name?: string; role?: string }[] {
+  if (!raw || !Array.isArray(raw)) return [];
+  const out: { cas: string; name?: string; role?: string }[] = [];
+  for (const item of raw) {
+    if (typeof item === 'string') {
+      const cas = item.trim();
+      if (cas) out.push({ cas });
+    } else if (item && typeof item === 'object' && typeof item.cas === 'string') {
+      const cas = item.cas.trim();
+      if (!cas) continue;
+      out.push({
+        cas,
+        ...(item.name ? { name: item.name } : {}),
+        ...(item.role ? { role: item.role } : {}),
+      });
+    }
+  }
+  return out;
 }
 
 function findImpactPerLiter(
@@ -247,10 +271,18 @@ function findThermalProfile(protocolName: string): ThermalProfile | null {
 }
 
 // ----- equipment resolution -----
+//
+// Resolution order:
+//   1. data/seed/protocol_equipment_requirements.csv — authoritative per-protocol
+//      list of equipment + preferred lab-catalog model. Used for every currently
+//      seeded protocol.
+//   2. Fallback to the legacy TECHNIQUE_EQUIPMENT_GROUPS / equipment.type match
+//      if the CSV has no rows for a protocol (e.g. a hand-rolled protocol that
+//      skipped the requirements sheet). Kept so older seed bundles still hydrate.
 
-/** Map a protocol's primary_technique to the equipment groups it needs.
- *  Curated from the 9 seeded protocols + equipment.csv. Keep this aligned with
- *  the lab catalog whenever new equipment lands. */
+/** Legacy technique -> generic equipment groups map.
+ *  Only used when protocol_equipment_requirements.csv has no rows for the
+ *  requested protocol. Kept as a safety net for older seed bundles. */
 const TECHNIQUE_EQUIPMENT_GROUPS: Record<string, string[]> = {
   spin_column_tissue_purification: ['centrifuge', 'incubator'],
   spin_column_genomic_dna: ['centrifuge', 'incubator'],
@@ -263,9 +295,8 @@ const TECHNIQUE_EQUIPMENT_GROUPS: Record<string, string[]> = {
   paramagnetic_pcr_cleanup: ['magnet_plate_96'],
 };
 
-/** Map an equipment_group (from equipment_term_map.csv) to a lab catalog entry
- *  (equipment.csv). The lab catalog uses an unrelated `type` taxonomy, so this
- *  is a deliberate translation table. */
+/** Map a legacy equipment_group to a lab catalog `type`. Only relevant for the
+ *  legacy fallback above. */
 const EQUIPMENT_GROUP_TO_CATALOG_TYPE: Record<string, string> = {
   thermocycler: 'thermocycler',
   centrifuge: 'microcentrifuge',
@@ -280,6 +311,35 @@ const EQUIPMENT_GROUP_TO_CATALOG_TYPE: Record<string, string> = {
 };
 
 function resolveEquipment(protocol: ProtocolSelectedRow): EquipmentRequirement[] {
+  // Preferred path: explicit per-protocol requirements from the seed CSV.
+  const reqs = loadProtocolEquipmentRequirements().filter(
+    (r) => r.protocol_name === protocol.protocol_name
+  );
+  if (reqs.length > 0) {
+    const catalog = loadEquipment();
+    return reqs.map<EquipmentRequirement>((row) => {
+      const lab =
+        catalog.find((e) => e.id === row.preferred_model_id) ??
+        catalog.find((e) => e.type === row.equipment_type);
+      const capacityFromRow = parseNumber(row.samples_per_run_default, 0) || null;
+      const capacity = lab
+        ? parseNumber(lab.capacity, 0) || capacityFromRow
+        : capacityFromRow;
+      return {
+        equipment_group: row.equipment_type,
+        lab_id: lab?.id ?? null,
+        capacity,
+        batchable: row.batchable_yes_no === 'yes',
+        notes: lab
+          ? `${lab.model} (capacity ${lab.capacity}, ~${row.run_duration_min_default} min/run)`
+          : `No lab catalog entry for preferred_model_id "${row.preferred_model_id}" ` +
+            `(equipment_type "${row.equipment_type}").`,
+      };
+    });
+  }
+
+  // Fallback: legacy technique->group mapping for protocols that predate the
+  // requirements CSV.
   const groups = TECHNIQUE_EQUIPMENT_GROUPS[protocol.primary_technique];
   if (!groups || groups.length === 0) {
     return [
@@ -288,8 +348,9 @@ function resolveEquipment(protocol: ProtocolSelectedRow): EquipmentRequirement[]
         lab_id: null,
         capacity: null,
         batchable: false,
-        notes: `No equipment mapping for technique "${protocol.primary_technique}". ` +
-          `Add it to TECHNIQUE_EQUIPMENT_GROUPS in lib/engine/hydrate.ts.`,
+        notes: `No equipment rows in protocol_equipment_requirements.csv for ` +
+          `"${protocol.protocol_name}", and no fallback mapping for technique ` +
+          `"${protocol.primary_technique}".`,
       },
     ];
   }

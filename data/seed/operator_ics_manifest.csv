@@ -1,0 +1,4 @@
+operator_id,name,ics_filename,schedule_horizon_start,schedule_horizon_end,timezone_assumed
+op1,Aryan,aryan_schedule.ics,2026-04-20,2026-04-24,floating local times
+op2,Sohini,sohini_schedule.ics,2026-04-20,2026-04-24,floating local times
+op3,Vikas,vikas_schedule.ics,2026-04-20,2026-04-24,floating local times

@@ -32,18 +32,21 @@ import {
   protocolMatchSchema,
 } from './schemas';
 
-const CONFIDENCE_FLOOR = 0.55; // below this we don't trust the match
+const CONFIDENCE_FLOOR = 0.5;  // below this we don't fully trust the match
 const AMBIGUITY_DELTA = 0.1;   // top two scores within this band -> ambiguous
 const MAX_TEXT_FOR_KEYWORDS = 8_000;
-const MAX_TEXT_FOR_LLM = 4_000;
-// Matcher is a single-object classification — Flash-Lite is plenty smart and
-// roughly 1.5× faster than full Flash. Keeps p95 latency well under the
-// 20 s timeout even when we have to fall back from a 503.
+// 2 KB is plenty of context for a single-class identify call (cover page +
+// first TOC entry). Cutting this down keeps p95 matcher latency under ~3 s
+// even on the LLM path.
+const MAX_TEXT_FOR_LLM = 2_000;
+// Matcher is a single-object classification — Flash-Lite is fast and has a
+// more generous free-tier quota (1000 RPD) than full Flash.
 const MATCHER_MODEL = FLASH_LITE_MODEL;
-// 10 s wasn't enough headroom for a 1+ MB PDF round trip, especially under
-// transient Google-side load. 20 s comfortably covers a single retry of the
-// happy path while still being a hard ceiling the demo can survive.
-const MATCHER_TIMEOUT_MS = 20_000;
+// 15 s is a hard ceiling covering one happy-path round trip. We never retry
+// the matcher (maxAttempts=1) — the deterministic tiers always give us a
+// viable fallback, so burning another 15 s on a flaky LLM is wasted wall time.
+const MATCHER_TIMEOUT_MS = 15_000;
+const MATCHER_MAX_ATTEMPTS = 1;
 
 export interface MatchInput {
   /** Original uploaded filename, e.g. "DNeasy_Blood_and_Tissue_Handbook.pdf". */
@@ -111,10 +114,9 @@ export async function matchProtocol(input: MatchInput): Promise<ProtocolMatchRes
       );
     } catch (err) {
       // LLM failed — fall through to the deterministic best guess. Never crash.
-      const note = err instanceof LlmClientError
-        ? `LLM tiebreaker failed (${err.code}): ${err.message}`
-        : `LLM tiebreaker threw: ${(err as Error).message}`;
-      return finalize(best, 'keyword', filenameScores, note);
+      const raw = err instanceof LlmClientError ? err.message : (err as Error).message;
+      const friendly = humanizeLlmFailure(raw);
+      return finalize(best, 'keyword', filenameScores, friendly);
     }
   }
 
@@ -155,98 +157,322 @@ const FILENAME_NOISE = [
   'sds',
 ];
 
-/** Per-protocol aliases. The key is the canonical protocol_name; the values are
- *  alternate strings (vendor codenames, common abbreviations, family handles)
- *  the user might have in their filename. Strings are case-insensitive. */
+/** Per-protocol aliases. Key is the canonical protocol_name (must match
+ *  protocols_selected.csv exactly); values are alternate strings the user
+ *  might have in their filename (vendor names, product codes, SKUs, common
+ *  shorthand). Case-insensitive substring match. Scored by alias length, so
+ *  more-specific (longer) aliases outweigh short/generic ones automatically.
+ *
+ *  IMPORTANT: Aliases are ordered from most-specific to most-generic. Add new
+ *  aliases here when a real upload fails to match — keep this table in sync
+ *  with /data/seed/protocols_selected.csv whenever that file changes. */
 const PROTOCOL_ALIASES: Record<string, string[]> = {
-  'DNeasy Blood & Tissue': [
-    'dneasy',
-    'dneasy blood',
-    'dneasy tissue',
-    'qiagen dneasy',
-    // QIAGEN is the unique vendor for DNeasy in the seeded set, so plain
-    // filenames like "DNA Extraction - QIAGEN.pdf" resolve here.
-    'qiagen',
-  ],
-  'GeneJET Genomic DNA Purification Kit': [
-    'genejet',
-    'genejet genomic',
-    'thermo genejet',
-    'genejet purification',
-    'k0721', 'k0722',
-  ],
-  'MagJET Genomic DNA Kit': [
-    'magjet genomic',
-    'magjet gdna',
-    'magjet dna',
-    'thermo magjet genomic',
-  ],
-  'Q5 Hot Start High-Fidelity 2X Master Mix': [
-    'q5',
-    'q5 hot start',
-    'q5 master mix',
-    'q5 high fidelity',
-    'neb q5',
-    'm0494',
-    // NEB is the unique vendor for Q5 in the seeded set, so plain filenames
-    // like "PCR - NEB.pdf" resolve here without ambiguity. Same pattern as
-    // 'qiagen' -> DNeasy, 'invitrogen' -> Platinum II, 'beckman' -> AMPure XP.
-    // Also a critical fallback: scan-only / oddly-encoded PCR PDFs from NEB
-    // sometimes can't be text-extracted by unpdf and Gemini's PDF endpoint
-    // rejects them with "The document has no pages." Filename alias is the
-    // only signal left when both tiers above fail.
-    'neb',
-  ],
-  'Platinum II Hot-Start PCR Master Mix (2X)': [
-    'platinum ii',
-    'platinum 2',
-    'invitrogen platinum',
-    'platinum hot-start',
-    'platinum hot start',
-    // Invitrogen is the *unique* vendor for Platinum II among the seeded
-    // protocols, so even a bare "invitrogen" filename resolves here without
-    // ambiguity. Real-world example: "PCR - Invitrogen.pdf".
-    'invitrogen',
-  ],
-  'JumpStart REDTaq ReadyMix Reaction Mix': [
-    'jumpstart',
-    'redtaq',
-    'jumpstart redtaq',
-    'sigma jumpstart',
-    'p0982',
-    // Sigma-Aldrich is the unique vendor for JumpStart REDTaq in the seeded
-    // set, so "PCR - Sigma Aldrich.pdf" / "PCR - Sigma.pdf" resolve here even
-    // when PDF text extraction fails. Same vendor-uniqueness pattern as the
-    // other three families.
-    'sigma',
-    'aldrich',
-    'sigma aldrich',
-    'sigma-aldrich',
-  ],
-  'Agencourt AMPure XP PCR Purification': [
-    'ampure',
+  // Agencourt AMPure XP — 96-well plate variant (the common case / default
+  // when filename just says "ampure xp" without a plate-format hint).
+  'Agencourt AMPure XP PCR Purification (96-well)': [
+    'agencourt ampure xp 96',
+    'ampure xp 96 well',
+    'ampure xp 96-well',
+    'ampure xp 96well',
+    'ampure xp 96',
+    'ampure 96 well',
+    'ampure 96well',
+    'beckman ampure xp',
+    'agencourt ampure xp',
     'ampure xp',
-    'agencourt',
-    'beckman ampure',
-    'a63881', 'a63880',
-    // Beckman / Beckman Coulter is the unique vendor for AMPure XP in the
-    // seeded set. Filenames like "Bead Pur - Beckman Coulter.pdf" are
-    // unambiguous once the alias is registered.
-    'beckman',
+    'agencourt ampure',
     'beckman coulter',
+    'beckman',
+    'agencourt',
+    'ampure',
+    'a63881',
+    'a63880',
   ],
-  'MagJET NGS Cleanup and Size Selection Kit': [
-    'magjet ngs',
+  // Agencourt AMPure XP — 384-well variant. Only fires when the filename has
+  // an explicit 384 disambiguator, otherwise 96-well's longer aliases win.
+  'Agencourt AMPure XP PCR Purification (384-well)': [
+    'agencourt ampure xp 384',
+    'ampure xp 384 well',
+    'ampure xp 384-well',
+    'ampure xp 384well',
+    'ampure xp 384',
+    'ampure 384 well',
+    'ampure 384well',
+    'ampure 384',
+    '384 well ampure',
+    '384 well spri',
+    'a63882',
+  ],
+  // KAPA Pure Beads 3X genomic DNA cleanup — the standard KAPA bead workflow.
+  'KAPA Pure Beads Genomic DNA Cleanup (3X)': [
+    'kapa pure beads genomic dna',
+    'kapa pure beads gdna',
+    'kapa pure beads 3x',
+    'kapa pure beads cleanup',
+    'kapa pure beads',
+    'kapa pure 3x',
+    'kapa genomic dna cleanup',
+    'kapa gdna cleanup',
+    'roche kapa pure',
+    'roche kapa',
+    'kk8000',
+    'kk8001',
+    '07983271001',
+  ],
+  // KAPA Pure Beads Dual Size Selection (the specialty variant).
+  'KAPA Pure Beads Dual Size Selection (0.6X/0.8X)': [
+    'kapa pure beads dual size selection',
+    'kapa dual size selection',
+    'kapa size selection',
+    'kapa pure dual size',
+    'kapa pure 0.6x 0.8x',
+    'kapa dual size',
+    '0.6x/0.8x',
+    '0.6x 0.8x',
+    'dual size selection',
+  ],
+  // KAPA HyperPure Beads — the HyperPure variant (distinct SKU line).
+  'KAPA HyperPure Beads Genomic DNA Cleanup (3X)': [
+    'kapa hyperpure beads genomic',
+    'kapa hyperpure beads',
+    'kapa hyperpure 3x',
+    'hyperpure beads',
+    'kapa hyperpure',
+    'hyperpure',
+    'kk8210',
+    'kk8211',
+  ],
+  // MagJET NGS Cleanup Protocol A — single-cleanup workflow. Thermo publishes
+  // ONE user guide (MAN0012957) covering both Protocol A and Protocol B, so
+  // we default to Protocol A when the filename doesn't tilt toward B
+  // (i.e. no "adapter", "dimer", or explicit "protocol b" token).
+  'MagJET NGS Cleanup Protocol A': [
+    'magjet ngs cleanup protocol a',
+    'magjet ngs protocol a',
+    'magjet cleanup protocol a',
+    'magjet ngs cleanup a',
+    'magjet ngs cleanup',
     'magjet cleanup',
+    'magjet ngs',
     'thermo magjet ngs',
+    'thermo magjet',
+    'magjet',
+    'man0012957',
     'k2821',
   ],
-  'AxyPrep Mag PCR Clean-up': [
-    'axyprep',
-    'axyprep mag',
-    'axygen',
-    'axyprep cleanup',
-    'mag-pcr-cl',
+  // MagJET NGS Adapter Removal Protocol B — size-selection / adapter-dimer
+  // removal. Fires when the filename explicitly signals size selection or
+  // adapter removal, which outweighs the generic "magjet ngs" alias.
+  'MagJET NGS Adapter Removal Protocol B': [
+    'magjet ngs adapter removal protocol b',
+    'magjet ngs adapter removal',
+    'magjet ngs protocol b',
+    'magjet adapter removal',
+    'magjet size selection',
+    'magjet cleanup protocol b',
+    'magjet ngs size selection',
+    'adapter dimer removal',
+    'adapter removal',
+    'adapter dimer',
+  ],
+  // NucleoMag NGS Single Cleanup — MACHEREY-NAGEL.
+  'NucleoMag NGS Single Cleanup (1.0X)': [
+    'nucleomag ngs single cleanup',
+    'nucleomag ngs cleanup',
+    'nucleomag single cleanup',
+    'nucleomag ngs',
+    'macherey nagel nucleomag',
+    'macherey-nagel nucleomag',
+    'nucleomag',
+    'macherey nagel',
+    'macherey-nagel',
+    'machereynagel',
+    '744970',
+  ],
+  // Zymo Select-a-Size Left-Sided Cleanup.
+  'Select-a-Size Left-Sided Cleanup (300 bp peak)': [
+    'zymo select a size left sided cleanup',
+    'select-a-size left-sided cleanup',
+    'select a size left sided',
+    'select-a-size',
+    'select a size',
+    'selectasize',
+    'zymo select a size',
+    'zymo select',
+    'zymo research',
+    'left-sided cleanup',
+    'left sided cleanup',
+    '300 bp peak',
+    'zymo',
+    'd4080',
+    'd4081',
+  ],
+
+  // ---------- DNA_extraction (3) ----------
+
+  // QIAGEN DNeasy 96 Blood & Tissue — spin-column 96-well gDNA extraction.
+  // Handles both product-centric filenames ("DNeasy 96 Handbook.pdf") and
+  // the vendor-catalog filename we ship with the demo bundle
+  // ("DNA Extraction - QIAGEN.pdf").
+  'DNeasy 96 Blood & Tissue (Demo 96-well)': [
+    'dneasy 96 blood and tissue',
+    'dneasy 96 blood tissue',
+    'dneasy blood and tissue',
+    'dneasy blood tissue',
+    'qiagen dneasy 96',
+    'qiagen blood and tissue',
+    'qiagen blood tissue',
+    'qiagen dna extraction',
+    'dna extraction qiagen',
+    'dneasy handbook',
+    'dneasy 96 well',
+    'dneasy 96',
+    'qiagen dneasy',
+    'qiagen genomic dna',
+    'qiagen gdna',
+    'dneasy',
+    'qiagen',
+    '69504',
+    '69506',
+    '69581',
+    '69582',
+  ],
+
+  // Thermo GeneJET Genomic DNA Purification (high-throughput variant).
+  // Vendor token is "Thermofisher" (no space) in the shipped PDF filename
+  // — keep both spaced and unspaced variants as aliases. Must outrank the
+  // MagJET Genomic entry via a longer, more specific alias.
+  'GeneJET Genomic DNA Purification (Demo high-throughput)': [
+    'genejet genomic dna purification mini kit',
+    'genejet genomic dna purification',
+    'genejet genomic dna mini kit',
+    'genejet genomic dna kit',
+    'genejet genomic dna',
+    'genejet whole blood',
+    'genejet blood',
+    'genejet genomic',
+    'thermo fisher genejet',
+    'thermofisher genejet',
+    'thermo genejet',
+    'genejet purification',
+    'genejet dna',
+    'genejet',
+    'dna extraction thermofisher',
+    'thermofisher dna extraction',
+    'thermo fisher dna extraction',
+    'k0721',
+    'k0722',
+  ],
+
+  // Thermo MagJET Genomic DNA Kit Protocol A — the KingFisher Flex 96
+  // automation workflow. Disambiguated from the MagJET NGS protocols by the
+  // "genomic" token; "kingfisher" is the other strong cue. The catalog code
+  // K1031/K1032 is distinct from the NGS K2821.
+  'MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96)': [
+    'magjet genomic dna kit protocol a',
+    'magjet genomic dna kit kingfisher',
+    'magjet genomic dna kit',
+    'magjet genomic dna',
+    'magjet genomic protocol a',
+    'magjet genomic',
+    'kingfisher flex 96',
+    'kingfisher flex',
+    'magjet kingfisher',
+    'dna extraction thermo scientific',
+    'thermo scientific dna extraction',
+    'thermo scientific magjet',
+    'k1031',
+    'k1032',
+  ],
+
+  // ---------- PCR (3) ----------
+
+  // NEB Q5 Hot Start High-Fidelity 2X Master Mix.
+  'Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well)': [
+    'q5 hot start high fidelity 2x master mix',
+    'q5 hot start high-fidelity 2x master mix',
+    'q5 hot start high fidelity master mix',
+    'q5 hot start high-fidelity master mix',
+    'q5 high fidelity master mix',
+    'q5 hot start master mix',
+    'q5 2x master mix',
+    'q5 master mix',
+    'q5 high fidelity',
+    'q5 high-fidelity',
+    'q5 hot start',
+    'q5 hot-start',
+    'neb q5 hot start',
+    'new england biolabs q5',
+    'new england biolabs',
+    'neb q5',
+    'pcr new england biolabs',
+    'pcr neb',
+    'neb pcr',
+    'q5',
+    'neb',
+    'm0494',
+    'm0493',
+    'm0515',
+  ],
+
+  // Invitrogen Platinum II Hot-Start Green PCR Master Mix.
+  'Platinum II Hot-Start Green PCR Master Mix (Demo 96-well)': [
+    'platinum ii hot start green pcr master mix',
+    'platinum ii hot-start green pcr master mix',
+    'platinum ii hot start green master mix',
+    'platinum ii hot-start green master mix',
+    'platinum ii green pcr master mix',
+    'platinum ii green master mix',
+    'platinum ii hot start green',
+    'platinum ii hot-start green',
+    'platinum ii pcr master mix',
+    'platinum ii master mix',
+    'platinum ii green pcr',
+    'platinum ii green',
+    'platinum ii hot start',
+    'platinum ii hot-start',
+    'platinum ii',
+    'platinumii',
+    'invitrogen platinum ii',
+    'invitrogen platinum',
+    'pcr invitrogen',
+    'invitrogen pcr',
+    'invitrogen',
+    '14001012',
+    '14001013',
+    '14001014',
+  ],
+
+  // Sigma-Aldrich JumpStart REDTaq ReadyMix.
+  'JumpStart REDTaq ReadyMix (Demo 96-well)': [
+    'jumpstart redtaq readymix',
+    'jumpstart redtaq ready mix',
+    'jumpstart red taq readymix',
+    'jumpstart red taq ready mix',
+    'jumpstart redtaq',
+    'jumpstart red taq',
+    'redtaq readymix',
+    'redtaq ready mix',
+    'red taq readymix',
+    'jumpstart readymix',
+    'jumpstart ready mix',
+    'redtaq',
+    'red taq',
+    'sigma aldrich jumpstart',
+    'sigma-aldrich jumpstart',
+    'sigma aldrich redtaq',
+    'sigma-aldrich redtaq',
+    'sigma jumpstart',
+    'sigma redtaq',
+    'pcr sigma aldrich',
+    'pcr sigma-aldrich',
+    'sigma aldrich pcr',
+    'sigma pcr',
+    'pcr sigma',
+    'jumpstart',
+    'p0982',
+    'p0600',
+    'p0750',
   ],
 };
 
@@ -278,6 +504,11 @@ function normalizeFilename(filename: string): { split: string; compact: string }
   return { split, compact };
 }
 
+/** Score = max aliasLength / 20, capped at 1. An alias ≥ 20 chars gets full
+ *  credit; shorter aliases scale linearly. Chosen empirically so a typical
+ *  product-name alias (15–25 chars) clears the 0.5 confidence floor without
+ *  a single generic alias like "zymo" (4 chars, score 0.2) ever doing so.
+ *  Keeps the floor stable regardless of how noisy the filename is. */
 function scoreByFilename(
   filename: string,
   protocols: ProtocolSelectedRow[]
@@ -285,20 +516,32 @@ function scoreByFilename(
   const { split, compact } = normalizeFilename(filename);
   return protocols.map<ProtocolMatchCandidate>((p) => {
     const aliases = PROTOCOL_ALIASES[p.protocol_name] ?? [];
+    // Full canonical name is always checked too, with high weight when the
+    // filename somehow contains it verbatim.
     const candidates = [p.protocol_name.toLowerCase(), ...aliases.map((a) => a.toLowerCase())];
 
     let bestScore = 0;
-    const reasons: string[] = [];
+    let bestAlias = '';
+    const matchedAliases: string[] = [];
     for (const c of candidates) {
-      const matchedIn =
-        split.includes(c) ? split : compact.includes(c) ? compact : null;
-      if (matchedIn) {
-        // Score by length of matched alias relative to the form it matched in.
-        const score = Math.min(1, c.length / Math.max(8, matchedIn.length / 1.5));
+      if (split.includes(c) || compact.includes(c)) {
+        matchedAliases.push(c);
+        const score = Math.min(1, c.length / 20);
         if (score > bestScore) {
           bestScore = score;
-          reasons.length = 0;
-          reasons.push(`Filename contains "${c}".`);
+          bestAlias = c;
+        }
+      }
+    }
+
+    const reasons: string[] = [];
+    if (bestAlias) {
+      reasons.push(`Filename contains "${bestAlias}".`);
+      // Corroborating alias hits — report up to two more so the UI "why this
+      // match?" expander shows the evidence, but they don't inflate score.
+      for (const a of matchedAliases) {
+        if (a !== bestAlias && reasons.length < 3) {
+          reasons.push(`Filename also contains "${a}".`);
         }
       }
     }
@@ -308,64 +551,129 @@ function scoreByFilename(
 
 // ----- Tier 2: keyword scan -----
 
-/** Per-protocol weighted keywords for in-document scanning. We bias toward
- *  vendor + product cues (high weight) and back off to technique tokens
- *  (low weight). Keep this aligned with reagent_term_map.csv. */
+/** Per-protocol weighted keywords for in-document scanning. Biased toward
+ *  brand + product cues (high weight) with technique tokens as corroboration.
+ *  Weights accumulate but cap at 1.0, so one strong brand hit (0.7) plus a
+ *  technique hit (0.3) clears the 0.5 floor cleanly. Keep aligned with
+ *  protocols_selected.csv + protocol_reagents.csv. */
 const PROTOCOL_KEYWORDS: Record<string, Array<{ pattern: RegExp; weight: number; label: string }>> = {
-  'DNeasy Blood & Tissue': [
-    { pattern: /\bdneasy\b/i, weight: 0.7, label: 'DNeasy product name' },
-    { pattern: /buffer\s*atl\b/i, weight: 0.4, label: 'Buffer ATL reagent' },
-    { pattern: /buffer\s*aw1\b/i, weight: 0.4, label: 'Buffer AW1 reagent' },
-    { pattern: /buffer\s*ae\b/i, weight: 0.3, label: 'Buffer AE reagent' },
+  'Agencourt AMPure XP PCR Purification (96-well)': [
+    { pattern: /ampure\s*xp/i, weight: 0.55, label: 'AMPure XP product name' },
+    { pattern: /\bagencourt\b/i, weight: 0.35, label: 'Agencourt brand' },
+    { pattern: /beckman/i, weight: 0.25, label: 'Beckman Coulter vendor' },
+    { pattern: /96[\s-]?well/i, weight: 0.35, label: '96-well plate format' },
+    { pattern: /\bspri(plate)?\b/i, weight: 0.25, label: 'SPRI cleanup technique' },
+    { pattern: /1\.8\s*x.*bead/i, weight: 0.25, label: '1.8× bead ratio (amplicon cleanup)' },
+  ],
+  'Agencourt AMPure XP PCR Purification (384-well)': [
+    { pattern: /ampure\s*xp/i, weight: 0.4, label: 'AMPure XP product name' },
+    { pattern: /\bagencourt\b/i, weight: 0.3, label: 'Agencourt brand' },
+    { pattern: /384[\s-]?well/i, weight: 0.6, label: '384-well plate format' },
+    { pattern: /spri.*384|384.*spri/i, weight: 0.3, label: '384-well SPRI format' },
+  ],
+  'KAPA Pure Beads Genomic DNA Cleanup (3X)': [
+    { pattern: /kapa\s*pure\s*beads/i, weight: 0.7, label: 'KAPA Pure Beads product' },
+    { pattern: /kapa\s+(genomic|gdna)/i, weight: 0.4, label: 'KAPA genomic DNA cleanup' },
+    { pattern: /\bkapa\b/i, weight: 0.25, label: 'KAPA brand' },
+    { pattern: /\broche\b/i, weight: 0.2, label: 'Roche vendor' },
+    { pattern: /3\s*x|3\.0\s*x/i, weight: 0.2, label: '3× bead ratio (gDNA cleanup)' },
+  ],
+  'KAPA Pure Beads Dual Size Selection (0.6X/0.8X)': [
+    { pattern: /kapa\s*pure\s*beads/i, weight: 0.45, label: 'KAPA Pure Beads product' },
+    { pattern: /dual\s*size\s*selection/i, weight: 0.6, label: 'dual-sided size selection' },
+    { pattern: /0\.6\s*x/i, weight: 0.3, label: '0.6× bead ratio (left bound)' },
+    { pattern: /0\.8\s*x/i, weight: 0.3, label: '0.8× bead ratio (right bound)' },
+  ],
+  'KAPA HyperPure Beads Genomic DNA Cleanup (3X)': [
+    { pattern: /hyperpure/i, weight: 0.75, label: 'HyperPure product name' },
+    { pattern: /kapa\s*hyperpure/i, weight: 0.85, label: 'KAPA HyperPure product' },
+    { pattern: /\bkapa\b/i, weight: 0.2, label: 'KAPA brand' },
+  ],
+  'MagJET NGS Cleanup Protocol A': [
+    { pattern: /magjet\s*ngs/i, weight: 0.55, label: 'MagJET NGS product' },
+    { pattern: /protocol\s*a\b/i, weight: 0.4, label: 'Protocol A (single cleanup)' },
+    { pattern: /\bmagjet\b/i, weight: 0.25, label: 'MagJET brand' },
+    { pattern: /\bthermo\b/i, weight: 0.2, label: 'Thermo Scientific vendor' },
+    { pattern: /man0012957/i, weight: 0.6, label: 'Thermo MAN0012957 document ID' },
+    { pattern: /\bk2821\b/i, weight: 0.6, label: 'Thermo K2821 catalog number' },
+    { pattern: /binding\s*buffer|binding\s*mix/i, weight: 0.2, label: 'Binding buffer/mix reagent' },
+  ],
+  'MagJET NGS Adapter Removal Protocol B': [
+    { pattern: /magjet\s*ngs/i, weight: 0.4, label: 'MagJET NGS product' },
+    { pattern: /adapter\s*(removal|dimer)/i, weight: 0.65, label: 'Adapter removal / dimer step' },
+    { pattern: /protocol\s*b\b/i, weight: 0.55, label: 'Protocol B (adapter removal)' },
+    { pattern: /size\s*selection/i, weight: 0.3, label: 'Size selection step' },
+  ],
+  'NucleoMag NGS Single Cleanup (1.0X)': [
+    { pattern: /nucleomag/i, weight: 0.75, label: 'NucleoMag product name' },
+    { pattern: /macherey[\s-]?nagel/i, weight: 0.5, label: 'MACHEREY-NAGEL vendor' },
+    { pattern: /\bmn\s+beads?\b/i, weight: 0.3, label: 'MN Beads reagent' },
+    { pattern: /1\.0\s*x|single\s*cleanup/i, weight: 0.2, label: '1.0× single-cleanup ratio' },
+  ],
+  'Select-a-Size Left-Sided Cleanup (300 bp peak)': [
+    { pattern: /select[\s-]?a[\s-]?size/i, weight: 0.75, label: 'Select-a-Size product' },
+    { pattern: /left[\s-]?sided/i, weight: 0.4, label: 'Left-sided cleanup' },
+    { pattern: /300\s*bp/i, weight: 0.3, label: '300 bp size peak' },
+    { pattern: /zymo/i, weight: 0.35, label: 'Zymo Research vendor' },
+  ],
+
+  // ---------- DNA_extraction ----------
+
+  'DNeasy 96 Blood & Tissue (Demo 96-well)': [
+    { pattern: /dneasy\s*96/i, weight: 0.75, label: 'DNeasy 96 product name' },
+    { pattern: /\bdneasy\b/i, weight: 0.55, label: 'DNeasy product line' },
     { pattern: /qiagen/i, weight: 0.3, label: 'QIAGEN vendor' },
+    { pattern: /blood\s*(&|and)\s*tissue/i, weight: 0.35, label: 'Blood & Tissue kit' },
+    { pattern: /spin[\s-]?column/i, weight: 0.2, label: 'Spin-column extraction' },
+    { pattern: /\b69504\b|\b69581\b|\b69582\b/i, weight: 0.6, label: 'QIAGEN DNeasy catalog number' },
   ],
-  'GeneJET Genomic DNA Purification Kit': [
-    { pattern: /genejet/i, weight: 0.7, label: 'GeneJET product name' },
-    { pattern: /wash\s*buffer\s*ii\b/i, weight: 0.4, label: 'Wash Buffer II' },
-    { pattern: /wash\s*buffer\s*i\b/i, weight: 0.4, label: 'Wash Buffer I' },
-    { pattern: /thermo/i, weight: 0.2, label: 'Thermo Scientific vendor' },
-    { pattern: /50\s*%\s*ethanol/i, weight: 0.2, label: '50% ethanol step' },
+
+  'GeneJET Genomic DNA Purification (Demo high-throughput)': [
+    { pattern: /genejet\s+genomic\s+dna/i, weight: 0.8, label: 'GeneJET Genomic DNA product' },
+    { pattern: /genejet\s+genomic/i, weight: 0.7, label: 'GeneJET Genomic kit' },
+    { pattern: /\bgenejet\b/i, weight: 0.55, label: 'GeneJET product line' },
+    { pattern: /thermo\s*fisher|thermofisher/i, weight: 0.25, label: 'Thermo Fisher vendor' },
+    { pattern: /\bk0721\b|\bk0722\b/i, weight: 0.6, label: 'GeneJET K0721/K0722 catalog number' },
   ],
-  'MagJET Genomic DNA Kit': [
-    { pattern: /magjet/i, weight: 0.5, label: 'MagJET product family' },
-    { pattern: /digestion\s*solution/i, weight: 0.4, label: 'Digestion Solution reagent' },
-    { pattern: /0\.15\s*M\s*NaCl/i, weight: 0.4, label: '0.15 M NaCl resuspension step' },
-    { pattern: /isopropanol/i, weight: 0.2, label: 'isopropanol bind step' },
+
+  'MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96)': [
+    { pattern: /magjet\s+genomic\s+dna/i, weight: 0.8, label: 'MagJET Genomic DNA product' },
+    { pattern: /magjet\s+genomic/i, weight: 0.7, label: 'MagJET Genomic kit' },
+    { pattern: /kingfisher\s*flex/i, weight: 0.6, label: 'KingFisher Flex platform' },
+    { pattern: /kingfisher/i, weight: 0.35, label: 'KingFisher automation' },
+    { pattern: /\bk1031\b|\bk1032\b/i, weight: 0.6, label: 'MagJET Genomic K1031/K1032 catalog number' },
+    { pattern: /protocol\s*a\b/i, weight: 0.2, label: 'Protocol A reference' },
   ],
-  'Q5 Hot Start High-Fidelity 2X Master Mix': [
-    { pattern: /\bq5\b/i, weight: 0.7, label: 'Q5 brand' },
-    { pattern: /hot\s*start.*high.fidelity/i, weight: 0.4, label: 'Hot Start High-Fidelity phrase' },
+
+  // ---------- PCR ----------
+
+  'Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well)': [
+    { pattern: /q5\s*hot[\s-]?start/i, weight: 0.7, label: 'Q5 Hot Start product' },
+    { pattern: /q5\s*high[\s-]?fidelity/i, weight: 0.65, label: 'Q5 High-Fidelity polymerase' },
+    { pattern: /q5\s*.{0,20}master\s*mix/i, weight: 0.6, label: 'Q5 Master Mix' },
+    { pattern: /\bq5\b/i, weight: 0.35, label: 'Q5 polymerase brand' },
+    { pattern: /new\s*england\s*biolabs/i, weight: 0.45, label: 'New England Biolabs vendor' },
     { pattern: /\bneb\b/i, weight: 0.3, label: 'NEB vendor' },
-    { pattern: /98\s*°?\s*C/i, weight: 0.2, label: '98°C denaturation' },
+    { pattern: /\bm0494\b|\bm0493\b|\bm0515\b/i, weight: 0.6, label: 'NEB Q5 catalog number' },
   ],
-  'Platinum II Hot-Start PCR Master Mix (2X)': [
-    { pattern: /platinum\s*II\b/i, weight: 0.7, label: 'Platinum II brand' },
-    { pattern: /platinum\s*GC\s*enhancer/i, weight: 0.4, label: 'Platinum GC Enhancer reagent' },
-    { pattern: /invitrogen/i, weight: 0.3, label: 'Invitrogen vendor' },
-    { pattern: /68\s*°?\s*C/i, weight: 0.2, label: '68°C extension' },
+
+  'Platinum II Hot-Start Green PCR Master Mix (Demo 96-well)': [
+    { pattern: /platinum\s*(ii|2)\s*hot[\s-]?start\s*green/i, weight: 0.85, label: 'Platinum II Hot-Start Green' },
+    { pattern: /platinum\s*(ii|2)\s*green/i, weight: 0.75, label: 'Platinum II Green master mix' },
+    { pattern: /platinum\s*(ii|2)/i, weight: 0.55, label: 'Platinum II polymerase' },
+    { pattern: /invitrogen/i, weight: 0.4, label: 'Invitrogen vendor' },
+    { pattern: /hot[\s-]?start\s*green/i, weight: 0.35, label: 'Hot-Start Green chemistry' },
+    { pattern: /\b14001012\b|\b14001013\b|\b14001014\b/i, weight: 0.6, label: 'Invitrogen Platinum II catalog number' },
   ],
-  'JumpStart REDTaq ReadyMix Reaction Mix': [
-    { pattern: /jumpstart/i, weight: 0.6, label: 'JumpStart brand' },
-    { pattern: /redtaq/i, weight: 0.6, label: 'REDTaq brand' },
-    { pattern: /sigma|aldrich/i, weight: 0.3, label: 'Sigma-Aldrich vendor' },
-    { pattern: /betaine/i, weight: 0.2, label: 'Betaine optional additive' },
-  ],
-  'Agencourt AMPure XP PCR Purification': [
-    { pattern: /ampure\s*XP/i, weight: 0.7, label: 'AMPure XP brand' },
-    { pattern: /agencourt/i, weight: 0.5, label: 'Agencourt brand' },
-    { pattern: /beckman/i, weight: 0.3, label: 'Beckman Coulter vendor' },
-    { pattern: /1\.8\s*x.*bead/i, weight: 0.4, label: '1.8x bead ratio' },
-    { pattern: /SPRIPlate/i, weight: 0.4, label: 'SPRIPlate equipment' },
-  ],
-  'MagJET NGS Cleanup and Size Selection Kit': [
-    { pattern: /magjet\s*NGS/i, weight: 0.7, label: 'MagJET NGS brand' },
-    { pattern: /binding\s*mix/i, weight: 0.5, label: 'Binding Mix reagent' },
-    { pattern: /size\s*selection/i, weight: 0.4, label: 'Size selection feature' },
-  ],
-  'AxyPrep Mag PCR Clean-up': [
-    { pattern: /axyprep/i, weight: 0.7, label: 'AxyPrep brand' },
-    { pattern: /axygen/i, weight: 0.5, label: 'Axygen vendor' },
-    { pattern: /tris.?HCl.*pH\s*8/i, weight: 0.3, label: '10 mM Tris-HCl pH 8 elution buffer' },
+
+  'JumpStart REDTaq ReadyMix (Demo 96-well)': [
+    { pattern: /jumpstart\s*red[\s-]?taq\s*ready[\s-]?mix/i, weight: 0.85, label: 'JumpStart REDTaq ReadyMix' },
+    { pattern: /jumpstart\s*red[\s-]?taq/i, weight: 0.75, label: 'JumpStart REDTaq' },
+    { pattern: /\bjumpstart\b/i, weight: 0.5, label: 'JumpStart product line' },
+    { pattern: /red[\s-]?taq\s*ready[\s-]?mix/i, weight: 0.65, label: 'REDTaq ReadyMix' },
+    { pattern: /\bred[\s-]?taq\b/i, weight: 0.45, label: 'REDTaq polymerase' },
+    { pattern: /sigma[\s-]?aldrich/i, weight: 0.35, label: 'Sigma-Aldrich vendor' },
+    { pattern: /\bp0982\b|\bp0600\b|\bp0750\b/i, weight: 0.6, label: 'Sigma JumpStart REDTaq catalog number' },
   ],
 };
 
@@ -484,7 +792,36 @@ async function runLlmTier(input: MatchInput) {
     model: MATCHER_MODEL,
     timeoutMs: MATCHER_TIMEOUT_MS,
     temperature: 0,
+    // No retries: the deterministic tiers always give us a viable fallback, so
+    // burning another 15 s on a flaky LLM just wastes wall time for the user.
+    maxAttempts: MATCHER_MAX_ATTEMPTS,
   }) as Promise<{ protocol_name: string; confidence: number; reasons: string[] }>;
+}
+
+/** Translate the SDK's raw error dump into a one-line, human-readable note
+ *  that's safe to show in the UI. Falls back to the deterministic best guess
+ *  in every case — the LLM failure itself is not fatal. */
+function humanizeLlmFailure(raw: string): string {
+  const m = raw ?? '';
+  if (/document has no pages|Unable to process input image|Invalid PDF/i.test(m)) {
+    return "Couldn't read the uploaded PDF (looks scanned, encrypted, or not a standard PDF). Used the filename only.";
+  }
+  if (/\b400\b.*(Bad Request|Invalid argument)/i.test(m)) {
+    return 'The uploaded file could not be parsed by the LLM. Used the filename only.';
+  }
+  if (/\b401\b|\b403\b|API key|permission|unauthenticated/i.test(m)) {
+    return 'The Gemini API key is missing or invalid. Set GEMINI_API_KEY in .env.local and restart the dev server.';
+  }
+  if (/\b429\b|quota|rate/i.test(m)) {
+    return 'Gemini rate limit hit. Try again in a moment; using the deterministic guess for now.';
+  }
+  if (/fetch failed|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|network/i.test(m)) {
+    return 'Could not reach Gemini right now (network). Using the deterministic guess instead.';
+  }
+  if (/TIMEOUT|timed out|aborted/i.test(m)) {
+    return 'Gemini took too long to respond. Using the deterministic guess instead.';
+  }
+  return 'LLM tiebreaker unavailable — using the deterministic guess instead.';
 }
 
 // ----- shared scoring helpers -----
@@ -507,6 +844,13 @@ function isConfident(candidates: ProtocolMatchCandidate[]): boolean {
   return true;
 }
 
+/** Wrap up a match result. Critical contract:
+ *  `protocol_name` is NEVER null when the catalog is non-empty. If no tier
+ *  produced any signal at all, we default to the first catalog entry with
+ *  low confidence + an explicit "please confirm" note so the UI can surface
+ *  a match card (which is editable via the dropdown) instead of throwing a
+ *  hard error. This is the "PDFs have to work no matter what" guarantee.
+ */
 function finalize(
   best: ProtocolMatchCandidate,
   matchedVia: ProtocolMatchResult['matched_via'],
@@ -514,14 +858,62 @@ function finalize(
   notes: string
 ): ProtocolMatchResult {
   const sorted = [...candidates].sort((a, b) => b.score - a.score).slice(0, 5);
-  const valid = best.protocol_name && best.score > 0;
+  const hasSignal = Boolean(best.protocol_name) && best.score > 0;
+  if (hasSignal) {
+    return {
+      protocol_name: best.protocol_name,
+      confidence: best.score,
+      matched_via: matchedVia,
+      candidates: sorted,
+      notes,
+    };
+  }
+
+  // Zero-signal fallback — pick a sensible default from the catalog so the
+  // downstream hydrate + plan flow always succeeds. The user can override via
+  // the UI dropdown. Confidence stays at 0 so the UI can badge it clearly.
+  const fallback = pickDefaultProtocol();
+  if (!fallback) {
+    // Catalog is empty (shouldn't happen in practice; seed bundle always has 9).
+    return {
+      protocol_name: null,
+      confidence: 0,
+      matched_via: 'none',
+      candidates: sorted,
+      notes,
+    };
+  }
+
+  const defaultedNote =
+    `Couldn't confidently identify the protocol — defaulted to "${fallback}". ` +
+    'Please pick the right one from the dropdown if this is wrong. ' +
+    `(${notes})`;
+  const existing = sorted.find((c) => c.protocol_name === fallback);
+  const candidatesOut = existing
+    ? sorted
+    : [
+        {
+          protocol_name: fallback,
+          score: 0,
+          reasons: ['Defaulted to catalog entry after deterministic + LLM tiers yielded no signal.'],
+        },
+        ...sorted,
+      ].slice(0, 5);
   return {
-    protocol_name: valid ? best.protocol_name : null,
-    confidence: valid ? best.score : 0,
-    matched_via: valid ? matchedVia : 'none',
-    candidates: sorted,
-    notes,
+    protocol_name: fallback,
+    confidence: 0,
+    matched_via: 'none',
+    candidates: candidatesOut,
+    notes: defaultedNote,
   };
+}
+
+/** Pick the first catalog protocol. Stable default so the UI never blocks on
+ *  a null match; the user can always override via the dropdown. */
+function pickDefaultProtocol(): string | null {
+  const protocols = loadProtocols();
+  if (protocols.length === 0) return null;
+  return protocols[0].protocol_name;
 }
 
 function dedup<T>(xs: T[]): T[] {

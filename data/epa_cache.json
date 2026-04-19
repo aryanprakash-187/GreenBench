@@ -1,139 +1,77 @@
 {
-  "aqueous_buffer": {
-    "cas_numbers_involved": [],
-    "epa_classification": "Low-hazard aqueous lab reagent class used as a screening bucket.",
-    "tri_reportable": null,
+  "paramagnetic_cleanup_beads": {
+    "cas_numbers_involved": [
+      { "cas": "25322-68-3", "name": "Polyethylene glycol 8000", "role": "SPRI precipitant (bulk)" },
+      { "cas": "7647-14-5", "name": "Sodium chloride", "role": "SPRI binding salt (bulk)" }
+    ],
+    "epa_classification": "Non-RCRA-listed specialty bead suspension. Bulk chemistry is PEG + NaCl in aqueous buffer.",
+    "tri_reportable": false,
     "comptox_hazard_flags": [
-      "low_hazard_aqueous"
-    ],
-    "rcra_code": null,
-    "incompatibilities": [],
-    "classification_by_analogy": true,
-    "sources": [
-      "https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes",
-      "Vendor manuals for selected protocols (buffer/water/elution categories)"
-    ],
-    "pulled_on": "2026-04-19"
-  },
-  "enzyme_aqueous_waste": {
-    "cas_numbers_involved": [],
-    "epa_classification": "Small-volume enzyme solution bucket (Proteinase K / RNase A) screened conservatively as aqueous biological reagent waste.",
-    "tri_reportable": null,
-    "comptox_hazard_flags": [
-      "enzyme_solution"
-    ],
-    "rcra_code": null,
-    "incompatibilities": [],
-    "classification_by_analogy": true,
-    "sources": [
-      "https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes",
-      "Vendor manuals for Proteinase K and RNase A use in selected kits"
-    ],
-    "pulled_on": "2026-04-19"
-  },
-  "chaotropic_salt_liquid_waste": {
-    "cas_numbers_involved": [],
-    "epa_classification": "Chaotropic-salt-containing proprietary buffer class; treat as bleach-incompatible liquid chemical waste.",
-    "tri_reportable": null,
-    "comptox_hazard_flags": [
-      "bleach_incompatibility",
-      "chaotropic_salt"
+      "viscous_reagent_handling",
+      "segregated_disposal_review"
     ],
     "rcra_code": null,
     "incompatibilities": [
-      "bleach_aqueous"
+      "strong_oxidizer_waste"
     ],
-    "classification_by_analogy": true,
     "sources": [
-      "https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes",
-      "QIAGEN DNeasy manual warning that Buffer AL / Buffer AW1 flow-through is not compatible with bleach"
+      "https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes"
     ],
     "pulled_on": "2026-04-19"
   },
-  "alcohol_liquid_waste": {
+  "ethanol_wash_solution": {
     "cas_numbers_involved": [
-      "64-17-5",
-      "67-63-0"
+      { "cas": "64-17-5", "name": "Ethanol", "role": "Flammable solvent" }
     ],
-    "epa_classification": "Ignitable alcohol solvent waste screening class.",
-    "tri_reportable": null,
+    "epa_classification": "Ignitable solvent waste candidate (RCRA D001) when concentrated above ~24% v/v.",
+    "tri_reportable": false,
     "comptox_hazard_flags": [
-      "flammable_solvent"
+      "flammable",
+      "solvent_handling"
     ],
     "rcra_code": "D001",
     "incompatibilities": [
       "strong_oxidizer_waste"
     ],
-    "classification_by_analogy": false,
     "sources": [
-      "https://comptox.epa.gov/dashboard",
-      "https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes"
+      "https://www.epa.gov/hw/defining-characteristic-ignitability"
     ],
     "pulled_on": "2026-04-19"
   },
-  "chemical_buffer_waste": {
-    "cas_numbers_involved": [],
-    "epa_classification": "General chemical buffer waste screening bucket for proprietary buffer mixes and prepared wash solutions.",
-    "tri_reportable": null,
+  "low_salt_elution": {
+    "cas_numbers_involved": [
+      { "cas": "77-86-1", "name": "Tris base (TRIS)", "role": "Buffering agent" },
+      { "cas": "60-00-4", "name": "EDTA (free acid)", "role": "Chelator, trace" }
+    ],
+    "epa_classification": "Low-hazard aqueous buffer (10 mM Tris, 0.1 mM EDTA or reagent-grade water). Not RCRA-listed.",
+    "tri_reportable": false,
     "comptox_hazard_flags": [
-      "review_sds_before_combining"
+      "low_hazard_aqueous"
     ],
     "rcra_code": null,
     "incompatibilities": [],
-    "classification_by_analogy": true,
-    "sources": [
-      "https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes",
-      "Vendor manuals for selected kits"
-    ],
+    "sources": [],
     "pulled_on": "2026-04-19"
   },
-  "solid_liquid_bead_waste": {
-    "cas_numbers_involved": [],
-    "epa_classification": "Paramagnetic bead slurry / bead-carryover screening bucket.",
-    "tri_reportable": null,
+  "cleanup_binding_buffer": {
+    "cas_numbers_involved": [
+      { "cas": "50-01-1", "name": "Guanidine hydrochloride", "role": "Chaotropic salt" },
+      { "cas": "67-63-0", "name": "Isopropanol", "role": "Flammable solvent co-factor" }
+    ],
+    "epa_classification": "Chaotropic binding buffer with solvent co-factor. Bleach-incompatible; isopropanol fraction triggers RCRA D001 at >=24% v/v.",
+    "tri_reportable": false,
     "comptox_hazard_flags": [
-      "solid_liquid_bead_waste"
+      "chaotropic_salt",
+      "bleach_incompatibility",
+      "flammable_solvent"
     ],
-    "rcra_code": null,
-    "incompatibilities": [],
-    "classification_by_analogy": true,
-    "sources": [
-      "https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes",
-      "AMPure XP, MagJET NGS, and AxyPrep bead cleanup manuals"
-    ],
-    "pulled_on": "2026-04-19"
-  },
-  "PCR_mix_small_volume": {
-    "cas_numbers_involved": [],
-    "epa_classification": "Small-volume PCR master mix screening bucket.",
-    "tri_reportable": null,
-    "comptox_hazard_flags": [
-      "enzyme_master_mix"
-    ],
-    "rcra_code": null,
-    "incompatibilities": [],
-    "classification_by_analogy": true,
-    "sources": [
-      "Vendor manuals for Q5 and Platinum II PCR master mixes",
-      "https://comptox.epa.gov/dashboard"
-    ],
-    "pulled_on": "2026-04-19"
-  },
-  "PCR_dye_mix_waste": {
-    "cas_numbers_involved": [],
-    "epa_classification": "PCR master mix with tracking dye screening bucket.",
-    "tri_reportable": null,
-    "comptox_hazard_flags": [
-      "contains_tracking_dye"
-    ],
-    "rcra_code": null,
+    "rcra_code": "D001",
     "incompatibilities": [
-      "aqueous_buffer"
+      "hypochlorite_bleach",
+      "strong_oxidizer_waste"
     ],
-    "classification_by_analogy": true,
     "sources": [
-      "JumpStart REDTaq ReadyMix Reaction Mix manual",
-      "https://comptox.epa.gov/dashboard"
+      "https://www.epa.gov/hw/defining-characteristic-ignitability"
     ],
     "pulled_on": "2026-04-19"
   }

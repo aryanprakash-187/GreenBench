@@ -1,20 +1,19 @@
 raw_term,normalized_name,equipment_group,batchable_yes_no,core_MVP_yes_no,notes
-microcentrifuge,Microcentrifuge,centrifuge,yes,yes,General spin-column and sample pelleting centrifuge
-thermal cycler,Thermal cycler,thermocycler,yes,yes,Generic PCR thermal cycler
-PCR machine,Thermal cycler,thermocycler,yes,yes,Synonym used in Q5 manual
-thermomixer,Thermomixer,incubation_mixer,no,yes,Used in DNeasy/MagJET incubation or elution
-shaking water bath,Shaking water bath,incubation_mixer,no,yes,Alternative incubation equipment in extraction protocols
-rocking platform,Rocking platform,incubation_mixer,no,yes,Alternative incubation equipment in extraction protocols
-water bath,Water bath,incubator,no,yes,Used for extraction incubations
-heating block,Heating block,incubator,no,yes,Used for extraction incubations
-Agencourt SPRIPlate 96 Ring Super Magnet Plate,SPRI magnet plate 96,magnet_plate_96,yes,yes,Beckman 96-well magnet for AMPure XP
-Agencourt SPRIPlate 384,SPRI magnet plate 384,magnet_plate_384,yes,no,Beckman 384-well magnet
-96 well magnetic plate,96-well magnetic plate,magnet_plate_96,yes,yes,Generic 96-well magnet for AxyPrep
-384 well magnetic plate,384-well magnetic plate,magnet_plate_384,yes,no,Generic 384-well magnet for AxyPrep
-magnetic rack,Magnetic rack,magnet_rack_tube,yes,yes,Tube-based magnetic rack
-Thermo Scientific MagJET Separation Rack,MagJET Separation Rack,magnet_rack_tube,yes,yes,Thermo rack for manual MagJET NGS cleanup
-Liquid Handling Robotics,Liquid Handling Robotics,automation,yes,no,Optional automation
-Multichannel Hand Pipette,Multichannel Hand Pipette,multichannel_pipette,yes,yes,Recommended for plate cleanup
-vortex,Vortex,mixer,no,yes,General vortexing
-KingFisher Flex 96-pin magnet head,KingFisher Flex 96-pin magnet head,automation,yes,no,Automation only
-KingFisher Duo 12-pin magnet head,KingFisher Duo 12-pin magnet head,automation,yes,no,Automation only
+Agencourt SPRIPlate 96 Ring Super Magnet Plate,magnetic_separator_plate,magnetic_separator,yes,yes,Beckman 96-well magnetic separator
+Agencourt SPRIPlate 384,magnetic_separator_plate,magnetic_separator,yes,yes,Beckman 384-well magnetic separator
+NucleoMag SEP,magnetic_separator_plate,magnetic_separator,yes,yes,MACHEREY-NAGEL 96-well separator
+magnetic rack,magnetic_separator_tube,magnetic_separator,yes,yes,Generic manual/tube magnetic rack
+KingFisher Flex,liquid_handler_automated,liquid_handler,yes,yes,High-throughput automated magnetic particle processor
+Biomek i5,liquid_handler_automated,liquid_handler,yes,yes,Automated cleanup workstation
+Biomek i7,liquid_handler_automated,liquid_handler,yes,yes,Automated liquid handling platform
+Hamilton STAR,liquid_handler_automated,liquid_handler,yes,yes,Generic large-scale liquid handler assumption
+multichannel hand pipette,multichannel_pipette,pipetting_device,yes,stretch,Manual fallback device
+plate sealer,plate_sealer,sealing_device,yes,yes,Shared accessory for automated multi-plate cleanup
+vortex,vortex,mixing_device,no,yes,Support equipment
+thermocycler,thermocycler,thermocycler,yes,yes,PCR block instrument
+PCR machine,thermocycler,thermocycler,yes,yes,Alias for thermocycler
+centrifuge,centrifuge_96,centrifuge,yes,yes,High-throughput plate centrifuge
+Centrifuge 4-16S,centrifuge_96,centrifuge,yes,yes,QIAGEN 96 protocol centrifuge
+microcentrifuge,microcentrifuge,centrifuge,yes,yes,Tube-based centrifuge
+QIAcube,liquid_handler_automated,liquid_handler,yes,stretch,Automated spin-column processor (mock overlap)
+thermomixer,thermomixer,support_device,yes,yes,Supports incubation/mixing

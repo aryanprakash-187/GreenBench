@@ -486,9 +486,11 @@ function alignCoordinations(
       c.aligned = allSame;
       if (allSame) {
         for (const s of placed) {
-          const others = placed.filter((o) => o.task_id !== s.task_id).map((o) => o.task_id);
-          s.shared_with = unique([...s.shared_with, ...others]);
-          s.notes.push(`Batched on ${c.equipment_group} with ${others.join(', ')}.`);
+          const otherPlacements = placed.filter((o) => o.task_id !== s.task_id);
+          const otherTaskIds = otherPlacements.map((o) => o.task_id);
+          const otherPeople = unique(otherPlacements.map((o) => o.person));
+          s.shared_with = unique([...s.shared_with, ...otherTaskIds]);
+          s.notes.push(`Batched on ${c.equipment_group} with ${otherPeople.join(', ')}.`);
         }
       }
     } else {
@@ -504,9 +506,12 @@ function alignCoordinations(
       c.aligned = true;
       const partTaskIds = placed.map((p) => p.task_id);
       for (const s of placed) {
-        const others = partTaskIds.filter((id) => id !== s.task_id);
-        s.shared_with = unique([...s.shared_with, ...others]);
-        s.notes.push(`Shared ${c.overlap_group} prep with ${others.join(', ')}.`);
+        const otherTaskIds = partTaskIds.filter((id) => id !== s.task_id);
+        const otherPeople = unique(
+          placed.filter((p) => p.task_id !== s.task_id).map((p) => p.person)
+        );
+        s.shared_with = unique([...s.shared_with, ...otherTaskIds]);
+        s.notes.push(`Shared ${c.overlap_group} prep with ${otherPeople.join(', ')}.`);
       }
     }
   }

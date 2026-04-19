@@ -1,58 +1,69 @@
 protocol_name,reagent_raw_term,volume_per_sample_ul,dead_volume_pct,per_sample,samples_default,samples_max
-DNeasy Blood & Tissue,Buffer ATL,180.0,10,yes,8,24
-DNeasy Blood & Tissue,Proteinase K,20.0,10,yes,8,24
-DNeasy Blood & Tissue,Buffer AL,200.0,10,yes,8,24
-DNeasy Blood & Tissue,ethanol (96–100%),200.0,15,yes,8,24
-DNeasy Blood & Tissue,Buffer AW1,500.0,15,yes,8,24
-DNeasy Blood & Tissue,Buffer AW2,500.0,15,yes,8,24
-DNeasy Blood & Tissue,Buffer AE,200.0,10,yes,8,24
-GeneJET Genomic DNA Purification Kit,Lysis Solution,200.0,10,yes,8,24
-GeneJET Genomic DNA Purification Kit,Proteinase K Solution,20.0,10,yes,8,24
-GeneJET Genomic DNA Purification Kit,RNase A Solution,20.0,10,yes,8,24
-GeneJET Genomic DNA Purification Kit,50% ethanol,400.0,15,yes,8,24
-GeneJET Genomic DNA Purification Kit,Wash Buffer I,500.0,15,yes,8,24
-GeneJET Genomic DNA Purification Kit,Wash Buffer II,500.0,15,yes,8,24
-GeneJET Genomic DNA Purification Kit,Elution Buffer,200.0,10,yes,8,24
-MagJET Genomic DNA Kit,0.15 M NaCl solution,40.0,10,yes,8,24
-MagJET Genomic DNA Kit,Digestion Solution,200.0,10,yes,8,24
-MagJET Genomic DNA Kit,Proteinase K Solution,20.0,10,yes,8,24
-MagJET Genomic DNA Kit,RNase A Solution,20.0,10,yes,8,24
-MagJET Genomic DNA Kit,Lysis Buffer,300.0,10,yes,8,24
-MagJET Genomic DNA Kit,isopropanol,400.0,15,yes,8,24
-MagJET Genomic DNA Kit,magnetic beads suspension,25.0,10,yes,8,24
-MagJET Genomic DNA Kit,Wash Buffer 1,800.0,15,yes,8,24
-MagJET Genomic DNA Kit,Wash Buffer 2,1600.0,15,yes,8,24
-MagJET Genomic DNA Kit,Elution Buffer,150.0,10,yes,8,24
-Q5 Hot Start High-Fidelity 2X Master Mix,Q5 Hot Start High-Fidelity 2X Master Mix,25.0,10,yes,12,96
-Q5 Hot Start High-Fidelity 2X Master Mix,10 µM Forward Primer,2.5,10,yes,12,96
-Q5 Hot Start High-Fidelity 2X Master Mix,10 µM Reverse Primer,2.5,10,yes,12,96
-Q5 Hot Start High-Fidelity 2X Master Mix,Template DNA,0.0,0,yes,12,96
-Q5 Hot Start High-Fidelity 2X Master Mix,Nuclease-Free Water,20.0,10,yes,12,96
-Q5 Hot Start High-Fidelity 2X Master Mix,mineral oil,0.0,0,yes,12,96
-Platinum II Hot-Start PCR Master Mix (2X),Platinum II Hot-Start PCR Master Mix (2X),25.0,10,yes,12,96
-Platinum II Hot-Start PCR Master Mix (2X),10 µM Forward Primer,1.0,10,yes,12,96
-Platinum II Hot-Start PCR Master Mix (2X),10 µM Reverse Primer,1.0,10,yes,12,96
-Platinum II Hot-Start PCR Master Mix (2X),Template DNA,0.0,0,yes,12,96
-Platinum II Hot-Start PCR Master Mix (2X),"Water, nuclease-free",23.0,10,yes,12,96
-Platinum II Hot-Start PCR Master Mix (2X),Platinum GC Enhancer,0.0,0,yes,12,96
-JumpStart REDTaq ReadyMix Reaction Mix,JumpStart REDTaq ReadyMix,25.0,10,yes,12,96
-JumpStart REDTaq ReadyMix Reaction Mix,Forward primer (20 µM),1.0,10,yes,12,96
-JumpStart REDTaq ReadyMix Reaction Mix,Reverse primer (20 µM),1.0,10,yes,12,96
-JumpStart REDTaq ReadyMix Reaction Mix,Template DNA,0.0,0,yes,12,96
-JumpStart REDTaq ReadyMix Reaction Mix,PCR Reagent water,23.0,10,yes,12,96
-JumpStart REDTaq ReadyMix Reaction Mix,Mineral Oil,0.0,0,yes,12,96
-JumpStart REDTaq ReadyMix Reaction Mix,Betaine,0.0,0,yes,12,96
-JumpStart REDTaq ReadyMix Reaction Mix,DMSO,0.0,0,yes,12,96
-Agencourt AMPure XP PCR Purification,Agencourt AMPure XP,90.0,10,yes,12,96
-Agencourt AMPure XP PCR Purification,Fresh 70% ethanol,400.0,15,yes,12,96
-Agencourt AMPure XP PCR Purification,Reagent Grade Water,40.0,10,yes,12,96
-Agencourt AMPure XP PCR Purification,TE Buffer,0.0,0,yes,12,96
-MagJET NGS Cleanup and Size Selection Kit,MagJET Magnetic Beads,5.0,10,yes,12,96
-MagJET NGS Cleanup and Size Selection Kit,Binding Mix,700.0,10,yes,12,96
-MagJET NGS Cleanup and Size Selection Kit,Wash Solution,800.0,15,yes,12,96
-MagJET NGS Cleanup and Size Selection Kit,Elution Buffer,50.0,10,yes,12,96
-AxyPrep Mag PCR Clean-up,AxyPrep Mag PCR clean-up bead solution,90.0,10,yes,12,96
-AxyPrep Mag PCR Clean-up,70% Ethanol,400.0,15,yes,12,96
-AxyPrep Mag PCR Clean-up,Reagent Grade Water,40.0,10,yes,12,96
-AxyPrep Mag PCR Clean-up,"10 mM TRIS-HCl, pH=8.0",0.0,0,yes,12,96
-AxyPrep Mag PCR Clean-up,"10 mM Tris-HCl pH 8.0, 1 mM EDTA",0.0,0,yes,12,96
+Agencourt AMPure XP PCR Purification (96-well),AMPure XP,90.0,40,yes,600,900
+Agencourt AMPure XP PCR Purification (96-well),fresh 70% ethanol,400.0,20,yes,600,900
+Agencourt AMPure XP PCR Purification (96-well),Reagent Grade Water,40.0,10,yes,600,900
+Agencourt AMPure XP PCR Purification (384-well),AMPure XP,25.0,40,yes,600,900
+Agencourt AMPure XP PCR Purification (384-well),fresh 70% ethanol,60.0,20,yes,600,900
+Agencourt AMPure XP PCR Purification (384-well),Reagent Grade Water,30.0,10,yes,600,900
+KAPA Pure Beads Genomic DNA Cleanup (3X),KAPA Pure Beads,300.0,40,yes,600,900
+KAPA Pure Beads Genomic DNA Cleanup (3X),fresh 80% ethanol,400.0,20,yes,600,900
+KAPA Pure Beads Genomic DNA Cleanup (3X),Elution Buffer,50.0,10,yes,600,900
+KAPA Pure Beads Dual Size Selection (0.6X/0.8X),KAPA Pure Beads,40.0,40,yes,600,900
+KAPA Pure Beads Dual Size Selection (0.6X/0.8X),fresh 80% ethanol,400.0,20,yes,600,900
+KAPA Pure Beads Dual Size Selection (0.6X/0.8X),Elution Buffer,30.0,10,yes,600,900
+KAPA HyperPure Beads Genomic DNA Cleanup (3X),KAPA HyperPure Beads,300.0,40,yes,600,900
+KAPA HyperPure Beads Genomic DNA Cleanup (3X),fresh 80% ethanol,400.0,20,yes,600,900
+KAPA HyperPure Beads Genomic DNA Cleanup (3X),Elution Buffer,50.0,10,yes,600,900
+MagJET NGS Cleanup Protocol A,MagJET Magnetic Beads,5.0,40,yes,600,900
+MagJET NGS Cleanup Protocol A,Binding Mix,700.0,15,yes,600,900
+MagJET NGS Cleanup Protocol A,Wash Solution,800.0,20,yes,600,900
+MagJET NGS Cleanup Protocol A,Elution Buffer,50.0,10,yes,600,900
+MagJET NGS Adapter Removal Protocol B,MagJET Magnetic Beads,10.0,40,yes,600,900
+MagJET NGS Adapter Removal Protocol B,Binding Mix,1400.0,15,yes,600,900
+MagJET NGS Adapter Removal Protocol B,Wash Solution,800.0,20,yes,600,900
+MagJET NGS Adapter Removal Protocol B,Elution Buffer,135.0,10,yes,600,900
+NucleoMag NGS Single Cleanup (1.0X),NucleoMag NGS Bead Suspension,100.0,40,yes,600,900
+NucleoMag NGS Single Cleanup (1.0X),fresh 80% ethanol,400.0,20,yes,600,900
+NucleoMag NGS Single Cleanup (1.0X),Elution Buffer,50.0,10,yes,600,900
+Select-a-Size Left-Sided Cleanup (300 bp peak),Select-a-Size MagBeads,49.0,40,yes,600,900
+Select-a-Size Left-Sided Cleanup (300 bp peak),DNA Wash Buffer,400.0,20,yes,600,900
+Select-a-Size Left-Sided Cleanup (300 bp peak),DNA Elution Buffer,25.0,10,yes,600,900
+DNeasy 96 Blood & Tissue (Demo 96-well),Buffer ATL,180.0,25,yes,600,900
+DNeasy 96 Blood & Tissue (Demo 96-well),Buffer AL,180.0,25,yes,600,900
+DNeasy 96 Blood & Tissue (Demo 96-well),Buffer AW1,500.0,25,yes,600,900
+DNeasy 96 Blood & Tissue (Demo 96-well),Buffer AW2,500.0,25,yes,600,900
+DNeasy 96 Blood & Tissue (Demo 96-well),Buffer AE,150.0,15,yes,600,900
+GeneJET Genomic DNA Purification (Demo high-throughput),Digestion Buffer,180.0,25,yes,600,900
+GeneJET Genomic DNA Purification (Demo high-throughput),Lysis Solution,200.0,25,yes,600,900
+GeneJET Genomic DNA Purification (Demo high-throughput),RNase A,20.0,15,yes,600,900
+GeneJET Genomic DNA Purification (Demo high-throughput),50% ethanol,400.0,25,yes,600,900
+GeneJET Genomic DNA Purification (Demo high-throughput),Wash Buffer I,500.0,25,yes,600,900
+GeneJET Genomic DNA Purification (Demo high-throughput),Wash Buffer II,500.0,25,yes,600,900
+GeneJET Genomic DNA Purification (Demo high-throughput),Elution Buffer,200.0,15,yes,600,900
+MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96),Digestion Solution,200.0,25,yes,600,900
+MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96),RNase A,20.0,15,yes,600,900
+MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96),Lysis Buffer,300.0,25,yes,600,900
+MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96),MagJET Magnetic Beads,25.0,40,yes,600,900
+MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96),Wash Buffer 1,800.0,25,yes,600,900
+MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96),Wash Buffer 2,1600.0,25,yes,600,900
+MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96),Elution Buffer,150.0,15,yes,600,900
+Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well),Q5 Hot Start High-Fidelity 2X Master Mix,25.0,20,yes,600,900
+Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well),forward primer,2.5,20,yes,600,900
+Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well),reverse primer,2.5,20,yes,600,900
+Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well),template DNA,2.0,10,yes,600,900
+Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well),nuclease-free water,18.0,20,yes,600,900
+Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well),Mineral Oil,10.0,15,yes,600,900
+Platinum II Hot-Start Green PCR Master Mix (Demo 96-well),Platinum II Hot-Start Green PCR Master Mix (2X),25.0,20,yes,600,900
+Platinum II Hot-Start Green PCR Master Mix (Demo 96-well),forward primer,1.0,20,yes,600,900
+Platinum II Hot-Start Green PCR Master Mix (Demo 96-well),reverse primer,1.0,20,yes,600,900
+Platinum II Hot-Start Green PCR Master Mix (Demo 96-well),template DNA,2.0,10,yes,600,900
+Platinum II Hot-Start Green PCR Master Mix (Demo 96-well),nuclease-free water,22.0,20,yes,600,900
+Platinum II Hot-Start Green PCR Master Mix (Demo 96-well),Platinum GC Enhancer,10.0,20,yes,600,900
+JumpStart REDTaq ReadyMix (Demo 96-well),JumpStart REDTaq ReadyMix,25.0,20,yes,600,900
+JumpStart REDTaq ReadyMix (Demo 96-well),forward primer,1.0,20,yes,600,900
+JumpStart REDTaq ReadyMix (Demo 96-well),reverse primer,1.0,20,yes,600,900
+JumpStart REDTaq ReadyMix (Demo 96-well),template DNA,2.0,10,yes,600,900
+JumpStart REDTaq ReadyMix (Demo 96-well),PCR Reagent water,22.0,20,yes,600,900
+JumpStart REDTaq ReadyMix (Demo 96-well),Mineral Oil,10.0,15,yes,600,900
+JumpStart REDTaq ReadyMix (Demo 96-well),Betaine,5.0,15,yes,600,900
+JumpStart REDTaq ReadyMix (Demo 96-well),DMSO,5.0,15,yes,600,900

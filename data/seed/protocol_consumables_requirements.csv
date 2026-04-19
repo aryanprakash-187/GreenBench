@@ -1,0 +1,46 @@
+protocol_name,consumable_normalized_name,quantity,scaling_basis
+Agencourt AMPure XP PCR Purification (96-well),plate_96well,1,per_96_samples
+Agencourt AMPure XP PCR Purification (96-well),pipette_tips,12,per_sample
+Agencourt AMPure XP PCR Purification (96-well),plate_seal,1,per_96_samples
+Agencourt AMPure XP PCR Purification (384-well),plate_384well,1,per_384_samples
+Agencourt AMPure XP PCR Purification (384-well),pipette_tips,6,per_sample
+Agencourt AMPure XP PCR Purification (384-well),plate_seal,1,per_384_samples
+KAPA Pure Beads Genomic DNA Cleanup (3X),plate_96well,1,per_96_samples
+KAPA Pure Beads Genomic DNA Cleanup (3X),pipette_tips,10,per_sample
+KAPA Pure Beads Genomic DNA Cleanup (3X),plate_seal,1,per_96_samples
+KAPA Pure Beads Dual Size Selection (0.6X/0.8X),plate_96well,1,per_96_samples
+KAPA Pure Beads Dual Size Selection (0.6X/0.8X),pipette_tips,14,per_sample
+KAPA Pure Beads Dual Size Selection (0.6X/0.8X),plate_seal,1,per_96_samples
+KAPA HyperPure Beads Genomic DNA Cleanup (3X),plate_96well,1,per_96_samples
+KAPA HyperPure Beads Genomic DNA Cleanup (3X),pipette_tips,10,per_sample
+KAPA HyperPure Beads Genomic DNA Cleanup (3X),plate_seal,1,per_96_samples
+MagJET NGS Cleanup Protocol A,plate_96well,1,per_96_samples
+MagJET NGS Cleanup Protocol A,pipette_tips,12,per_sample
+MagJET NGS Cleanup Protocol A,plate_seal,1,per_96_samples
+MagJET NGS Adapter Removal Protocol B,plate_96well,2,per_96_samples
+MagJET NGS Adapter Removal Protocol B,pipette_tips,18,per_sample
+MagJET NGS Adapter Removal Protocol B,plate_seal,2,per_96_samples
+NucleoMag NGS Single Cleanup (1.0X),plate_96well,1,per_96_samples
+NucleoMag NGS Single Cleanup (1.0X),pipette_tips,12,per_sample
+NucleoMag NGS Single Cleanup (1.0X),plate_seal,1,per_96_samples
+Select-a-Size Left-Sided Cleanup (300 bp peak),plate_96well,1,per_96_samples
+Select-a-Size Left-Sided Cleanup (300 bp peak),pipette_tips,10,per_sample
+Select-a-Size Left-Sided Cleanup (300 bp peak),plate_seal,1,per_96_samples
+DNeasy 96 Blood & Tissue (Demo 96-well),plate_96well,2,per_192_samples
+DNeasy 96 Blood & Tissue (Demo 96-well),pipette_tips,8,per_sample
+DNeasy 96 Blood & Tissue (Demo 96-well),plate_seal,2,per_192_samples
+GeneJET Genomic DNA Purification (Demo high-throughput),plate_96well,2,per_192_samples
+GeneJET Genomic DNA Purification (Demo high-throughput),pipette_tips,10,per_sample
+GeneJET Genomic DNA Purification (Demo high-throughput),plate_seal,2,per_192_samples
+MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96),plate_96well,3,per_384_samples
+MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96),pipette_tips,12,per_sample
+MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96),plate_seal,3,per_384_samples
+Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well),plate_96well,4,per_384_samples
+Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well),pipette_tips,6,per_sample
+Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well),plate_seal,4,per_384_samples
+Platinum II Hot-Start Green PCR Master Mix (Demo 96-well),plate_96well,4,per_384_samples
+Platinum II Hot-Start Green PCR Master Mix (Demo 96-well),pipette_tips,6,per_sample
+Platinum II Hot-Start Green PCR Master Mix (Demo 96-well),plate_seal,4,per_384_samples
+JumpStart REDTaq ReadyMix (Demo 96-well),plate_96well,4,per_384_samples
+JumpStart REDTaq ReadyMix (Demo 96-well),pipette_tips,6,per_sample
+JumpStart REDTaq ReadyMix (Demo 96-well),plate_seal,4,per_384_samples

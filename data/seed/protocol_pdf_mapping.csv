@@ -1,0 +1,16 @@
+protocol_name,source_pdf,source_section
+Agencourt AMPure XP PCR Purification (96-well),bead 4.pdf,"96 Well Format Procedure, 1.8X bead ratio, two 70% ethanol washes, 40 uL elution"
+Agencourt AMPure XP PCR Purification (384-well),bead 4.pdf,"384 Well Format Procedure, 14 uL input -> 25 uL beads, two 30 uL washes, 30 uL elution"
+KAPA Pure Beads Genomic DNA Cleanup (3X),bead 7.pdf / KAPA Pure Beads technical sheet,3X cleanup of genomic DNA in 100 uL
+KAPA Pure Beads Dual Size Selection (0.6X/0.8X),bead 7.pdf / KAPA Pure Beads technical sheet,0.6X then additional 0.2X size selection on 50 uL library
+KAPA HyperPure Beads Genomic DNA Cleanup (3X),bead 8.pdf / KAPA HyperPure Beads technical sheet,3X cleanup of genomic DNA in 100 uL
+MagJET NGS Cleanup Protocol A,bead 5.pdf,Protocol A cleanup; 5 uL beads + 700 uL Binding Mix + two 400 uL washes
+MagJET NGS Adapter Removal Protocol B,bead 5.pdf,Protocol B adapter removal; two bead/binding passes and final washes/elution
+NucleoMag NGS Single Cleanup (1.0X),bead 10.pdf,Protocol 5.1 single cleanup; 100 uL beads + two 200 uL 80% ethanol washes
+Select-a-Size Left-Sided Cleanup (300 bp peak),bead 6.pdf,Left-sided cleanup for 300 bp peak on 50 uL sample
+DNeasy 96 Blood & Tissue (Demo 96-well),DNA Extraction - QIAGEN.pdf,DNeasy 96 procedures and DNeasy 96 kit contents in handbook
+GeneJET Genomic DNA Purification (Demo high-throughput),DNA Extraction - Thermofisher.pdf,GeneJET genomic DNA purification procedures for tissue / cells / blood
+MagJET Genomic DNA Kit Protocol A (KingFisher Flex 96),DNA Extraction Thermo Scientific.pdf,Protocol A for cultured mammalian cells using KingFisher Flex 96
+Q5 Hot Start High-Fidelity 2X Master Mix (Demo 96-well),PCR - NEB.pdf,50 uL reaction setup and standard cycling conditions
+Platinum II Hot-Start Green PCR Master Mix (Demo 96-well),PCR - Invitrogen.pdf,50 uL reaction setup and 3-step / 2-step cycling
+JumpStart REDTaq ReadyMix (Demo 96-well),PCR - Sigma Aldrich.pdf,50 uL ReadyMix protocol and typical cycling parameters
