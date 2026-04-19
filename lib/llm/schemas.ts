@@ -95,19 +95,22 @@ const HEADLINE_MAX = 90;
 const BODY_MAX = 280;
 
 /** Light heuristic to keep the model from emitting hand-wavy savings phrases
- *  like "many" or "several". Real numbers come from coordination.savings. */
-const SAVINGS_PHRASE_REGEX = /\d/;
+ *  like "many" or "several". Real numbers come from coordination.savings.
+ *
+ *  We previously enforced this as a hard zod refine on every coord prose,
+ *  but that failed atomically for the entire week's narration whenever the
+ *  engine emitted at least one zero-savings coordination (e.g. an equipment
+ *  share clamped to runs_saved=0 by capacity math). For those, the LLM has
+ *  no number to quote and quite reasonably wrote things like "No runs saved".
+ *  We now soft-check this in narrate.ts::wrapGenerated and substitute the
+ *  deterministic phrase when the LLM forgets the digit. The schema only
+ *  enforces presence + length so position-based joining stays safe. */
+export const SAVINGS_PHRASE_DIGIT_REGEX = /\d/;
 
 const coordinationProseSchema = z.object({
   headline: z.string().min(1).max(HEADLINE_MAX),
   body: z.string().min(1).max(BODY_MAX),
-  savings_phrase: z
-    .string()
-    .min(1)
-    .max(HEADLINE_MAX)
-    .refine((s) => SAVINGS_PHRASE_REGEX.test(s), {
-      message: 'savings_phrase must contain at least one digit',
-    }),
+  savings_phrase: z.string().min(1).max(HEADLINE_MAX),
 });
 
 const separationProseSchema = z.object({

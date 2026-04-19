@@ -35,6 +35,7 @@ import { generateJson, llmAvailability, LlmClientError } from './client';
 import {
   geminiResponseSchemaForNarrate,
   narrationResponseSchema,
+  SAVINGS_PHRASE_DIGIT_REGEX,
   type LLMNarrationResponse,
 } from './schemas';
 import type {
@@ -216,10 +217,20 @@ function wrapGenerated(
   llm: LLMNarrationResponse
 ): NarratedWeekPlanResult {
   const coordinations: NarratedCoordination[] = result.coordinations.map(
-    (c, i) => ({
-      ...c,
-      prose: clampCoordinationProse(llm.coordinations[i]),
-    })
+    (c, i) => {
+      const llmProse = clampCoordinationProse(llm.coordinations[i]);
+      // Soft-enforce the "real numbers only" rule: if the LLM wrote something
+      // hand-wavy ("Saves a lot") OR if the underlying coord has all-zero
+      // savings (so there's literally no digit to quote), substitute the
+      // deterministic phrase that always emits at least a `0`. This avoids
+      // turning one weak savings_phrase into a whole-week narration failure.
+      const safeProse: CoordinationProse = SAVINGS_PHRASE_DIGIT_REGEX.test(
+        llmProse.savings_phrase
+      )
+        ? llmProse
+        : { ...llmProse, savings_phrase: clampLine(formatSavingsPhrase(c), SAVINGS_PHRASE_MAX) };
+      return { ...c, prose: safeProse };
+    }
   );
   const separations: NarratedSeparation[] = result.separations.map((s, i) => ({
     ...s,
