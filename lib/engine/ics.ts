@@ -1,0 +1,172 @@
+// Tiny ICS parser, scoped to what the engine needs.
+//
+// Handles single VEVENTs with DTSTART/DTEND/SUMMARY (and DTSTART;VALUE=DATE
+// for all-day events). Does NOT expand RRULE — for the demo we treat each
+// uploaded calendar as a flat list of one-off blocks.
+//
+// Returns intervals clipped to the planning week [week_start, week_start + 7d).
+//
+// Why hand-rolled instead of node-ical: zero new deps, ~80 lines, and the demo
+// only needs to honor user-uploaded busy blocks, not generate calendars.
+// (We do still pull in the `ics` package for export later — that's generation,
+// a separate problem.)
+
+import type { BusyInterval } from './types';
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+interface RawEvent {
+  start: Date | null;
+  end: Date | null;
+  summary: string;
+}
+
+/** Parse an ICS string and return BusyIntervals that overlap the week.
+ *  - `weekStartIso` is the inclusive week start (00:00 of Monday).
+ *  - Events outside the week are dropped.
+ *  - Events that straddle the week boundary are clipped to the boundary. */
+export function parseIcsToBusy(
+  icsText: string,
+  weekStartIso: string
+): BusyInterval[] {
+  const weekStart = new Date(weekStartIso);
+  if (Number.isNaN(weekStart.getTime())) {
+    throw new Error(`Invalid week_start_iso: ${weekStartIso}`);
+  }
+  const weekEnd = new Date(weekStart.getTime() + WEEK_MS);
+
+  // RFC 5545 unfolds long lines: a line starting with a space/tab continues
+  // the previous line. Do that first.
+  const unfolded = icsText.replace(/\r?\n[ \t]/g, '');
+  const lines = unfolded.split(/\r?\n/);
+
+  const events: RawEvent[] = [];
+  let current: RawEvent | null = null;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    if (line === 'BEGIN:VEVENT') {
+      current = { start: null, end: null, summary: '' };
+      continue;
+    }
+    if (line === 'END:VEVENT') {
+      if (current) events.push(current);
+      current = null;
+      continue;
+    }
+    if (!current) continue;
+
+    const colonIdx = line.indexOf(':');
+    if (colonIdx === -1) continue;
+    const head = line.slice(0, colonIdx);
+    const value = line.slice(colonIdx + 1);
+    const propName = head.split(';')[0].toUpperCase();
+
+    if (propName === 'DTSTART') {
+      current.start = parseIcsDate(head, value);
+    } else if (propName === 'DTEND') {
+      current.end = parseIcsDate(head, value);
+    } else if (propName === 'SUMMARY') {
+      current.summary = unescapeIcsText(value);
+    }
+  }
+
+  const intervals: BusyInterval[] = [];
+  for (const ev of events) {
+    if (!ev.start) continue;
+    // ICS allows VEVENTs without DTEND (treated as zero-length / all-day);
+    // for busy-tracking purposes we model 1h default.
+    const end = ev.end ?? new Date(ev.start.getTime() + 60 * 60 * 1000);
+
+    // Clip to the planning week.
+    const clipStart = ev.start < weekStart ? weekStart : ev.start;
+    const clipEnd = end > weekEnd ? weekEnd : end;
+    if (clipStart >= clipEnd) continue;
+
+    intervals.push({
+      start_iso: clipStart.toISOString(),
+      end_iso: clipEnd.toISOString(),
+      summary: ev.summary,
+    });
+  }
+
+  // Sort + merge overlapping busy blocks so the scheduler doesn't see
+  // duplicates from messy calendars.
+  intervals.sort((a, b) => a.start_iso.localeCompare(b.start_iso));
+  return mergeOverlapping(intervals);
+}
+
+function mergeOverlapping(intervals: BusyInterval[]): BusyInterval[] {
+  if (intervals.length === 0) return [];
+  const out: BusyInterval[] = [intervals[0]];
+  for (let i = 1; i < intervals.length; i++) {
+    const prev = out[out.length - 1];
+    const cur = intervals[i];
+    if (cur.start_iso <= prev.end_iso) {
+      // Overlap → extend the previous interval. Keep the earlier summary or
+      // join them so the scheduler can still surface why a slot is busy.
+      const newEnd = cur.end_iso > prev.end_iso ? cur.end_iso : prev.end_iso;
+      out[out.length - 1] = {
+        start_iso: prev.start_iso,
+        end_iso: newEnd,
+        summary: prev.summary && cur.summary && prev.summary !== cur.summary
+          ? `${prev.summary} + ${cur.summary}`
+          : prev.summary || cur.summary,
+      };
+    } else {
+      out.push(cur);
+    }
+  }
+  return out;
+}
+
+/** Parse an ICS date/datetime value. Supports:
+ *   20260420T140000Z          (UTC)
+ *   20260420T140000           (floating local — interpreted as UTC for demo)
+ *   20260420                  (date-only, all-day; treated as 00:00–23:59)
+ *  When `head` carries `;VALUE=DATE` we always treat the value as date-only.
+ *  When `head` carries `;TZID=...` we ignore the TZ (demo simplification —
+ *  uploaded calendars from the team are expected to be UTC or floating). */
+function parseIcsDate(head: string, value: string): Date | null {
+  const isDateOnly =
+    head.toUpperCase().includes('VALUE=DATE') && !value.includes('T');
+
+  if (isDateOnly || /^\d{8}$/.test(value)) {
+    // YYYYMMDD → midnight UTC of that day.
+    const m = /^(\d{4})(\d{2})(\d{2})$/.exec(value);
+    if (!m) return null;
+    return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 0, 0, 0));
+  }
+
+  const m = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z?)$/.exec(value);
+  if (!m) return null;
+  const [, y, mo, d, h, mi, s, z] = m;
+  if (z === 'Z') {
+    return new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s));
+  }
+  // Floating time: treat as UTC for the demo. (Switching to per-person TZs
+  // later would mean carrying a TZID through the whole engine — out of scope.)
+  return new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +s));
+}
+
+function unescapeIcsText(s: string): string {
+  return s
+    .replace(/\\n/gi, '\n')
+    .replace(/\\,/g, ',')
+    .replace(/\\;/g, ';')
+    .replace(/\\\\/g, '\\');
+}
+
+/** Compute the ISO timestamp for the next Monday at 00:00 in the user's
+ *  local timezone, expressed as UTC ISO (Date is timezone-agnostic for our
+ *  scheduling purposes). If today is Monday, returns today. */
+export function nextMondayLocalIso(now: Date = new Date()): string {
+  const d = new Date(now);
+  const dayOfWeek = d.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  // Days until next Monday (0 if already Monday)
+  const daysUntil = (1 - dayOfWeek + 7) % 7;
+  d.setDate(d.getDate() + daysUntil);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}

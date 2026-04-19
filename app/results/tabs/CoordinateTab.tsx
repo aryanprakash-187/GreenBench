@@ -1,15 +1,22 @@
 "use client";
 
 import { useState } from "react";
+
 import type { Submission } from "@/components/ResultsView";
 import { SectionCard } from "@/app/results/tabs/PlanTab";
+import type {
+  NarratedCoordination,
+  NarratedSeparation,
+} from "@/lib/engine/types";
 
-export default function CoordinateTab({ data }: { data: Submission | null }) {
+export default function CoordinateTab({ data }: { data: Submission }) {
   const [annualized, setAnnualized] = useState(false);
-  const names =
-    data?.people
-      ?.map((p) => p.name)
-      .filter((n) => n && n.trim().length > 0) ?? [];
+  const plan = data.plan;
+  const view = annualized ? plan.impact.annualized_if_repeated : plan.impact.weekly;
+
+  const names = data.people
+    .map((p) => p.name)
+    .filter((n) => n && n.trim().length > 0);
   const labelName =
     names.length === 0
       ? "your"
@@ -19,23 +26,9 @@ export default function CoordinateTab({ data }: { data: Submission | null }) {
       ? `${names[0]} & ${names[1]}'s`
       : `${names[0]}, ${names[1]} & ${names[2]}'s`;
 
-  const weekly = {
-    volume: 45,
-    plastic: 18,
-    hazardEvents: 2,
-    co2eLow: 1.2,
-    co2eHigh: 2.8,
-  };
-  const factor = annualized ? 48 : 1;
-  const volume = (weekly.volume * factor).toLocaleString();
-  const plastic = weekly.plastic * factor;
-  const hazardEvents = weekly.hazardEvents * factor;
-  const co2eLow = (weekly.co2eLow * factor).toFixed(1);
-  const co2eHigh = (weekly.co2eHigh * factor).toFixed(1);
-
   return (
     <div className="space-y-8">
-      {/* Impact summary */}
+      {/* Impact summary (real numbers from engine, with Weekly/Annual toggle) */}
       <section className="relative overflow-hidden rounded-3xl border border-forest-700/10 bg-gradient-to-br from-forest-700 via-forest-600 to-ocean-700 p-8 text-sand-50 shadow-soft md:p-10">
         <div
           aria-hidden
@@ -44,10 +37,11 @@ export default function CoordinateTab({ data }: { data: Submission | null }) {
         <div className="relative flex items-start justify-between gap-4">
           <div>
             <p className="text-[10px] uppercase tracking-[0.25em] text-sand-100/70">
-              Impact summary · {annualized ? "Annualized" : "This week"}
+              Impact summary · {annualized ? "Annualized (×52)" : "This week"}
             </p>
             <h3 className="mt-1 font-display text-3xl font-semibold md:text-4xl">
-              Coordinating {labelName} lab saves real waste.
+              {plan.headline_tagline?.trim() ||
+                `Coordinating ${labelName} lab saves real waste.`}
             </h3>
           </div>
           <button
@@ -58,61 +52,51 @@ export default function CoordinateTab({ data }: { data: Submission | null }) {
           </button>
         </div>
         <div className="relative mt-8 grid gap-6 md:grid-cols-4">
-          <Metric big={`${volume} mL`} label="Reagent volume saved" />
-          <Metric big={`${plastic}`} label="Plastic consumables saved" />
-          <Metric big={`${hazardEvents}`} label="Hazardous disposal events avoided" />
           <Metric
-            big={`${co2eLow}–${co2eHigh} kg`}
+            big={formatVolume(view.reagent_volume_saved_ml)}
+            label="Reagent volume saved"
+          />
+          <Metric
+            big={`${view.prep_events_saved}`}
+            label="Prep events consolidated"
+          />
+          <Metric
+            big={`${view.equipment_runs_saved}`}
+            label="Equipment runs saved"
+          />
+          <Metric
+            big={`${view.estimated_co2e_kg_range[0].toFixed(1)}–${view.estimated_co2e_kg_range[1].toFixed(1)} kg`}
             label="CO₂e range"
           />
         </div>
+        <div className="relative mt-4 text-[11px] text-sand-100/70">
+          {view.hazardous_disposal_events_avoided} hazardous disposal{" "}
+          {view.hazardous_disposal_events_avoided === 1 ? "event" : "events"}{" "}
+          avoided ·{" "}
+          {plan.narration.generated
+            ? `prose by ${plan.narration.model}`
+            : "deterministic prose (LLM unavailable)"}
+        </div>
       </section>
 
-      {/* Coordination recommendations */}
+      {/* Coordinations from the engine, with prose from the narrator */}
       <SectionCard
         eyebrow="Coordination recommendations"
         title="Ranked by hazard-weighted impact"
         lede="Each card combines tasks that share a reagent or equipment run within its stability window. Expand to see vendor terms collapse to their normalized group, or the EPA citation behind every hazard call."
       >
-        <div className="space-y-4">
-          <RecommendationCard
-            impact="High"
-            accent="moss"
-            title="Prep 60 mL of 70% ethanol once Monday morning"
-            body="Covers the DNeasy wash (Mon), the MagJET wash (Tue), and the AMPure cleanup (Thu). You&rsquo;d have prepped three separate times; this consolidates to one."
-            vendorTerms={[
-              { raw: "Buffer AW2", norm: "ethanol_50_to_100" },
-              { raw: "Wash Buffer 2", norm: "ethanol_50_to_100" },
-              { raw: "80% EtOH wash", norm: "ethanol_50_to_100" },
-            ]}
-            citation="EPA CompTox · CASRN 64-17-5 · RCRA D001 (ignitable)"
-            savings="Saves ~40 mL reagent · 2 prep events"
+        {plan.coordinations.length === 0 ? (
+          <EmptyMessage
+            title="No coordination opportunities this week."
+            body="Either every protocol is already fully self-contained, or the people you submitted don't have shareable reagents or batchable equipment in common."
           />
-          <RecommendationCard
-            impact="Medium"
-            accent="ocean"
-            title="Batch two PCRs on a single 96-well block"
-            body="Both protocols use the same annealing temperature (60 °C), extension time (30 s), and cycle count (30). Combined sample count (20) fits in one run."
-            vendorTerms={[
-              { raw: "Q5 Hot Start Master Mix", norm: "hot_start_endpoint_PCR" },
-              { raw: "Phusion Flash 2× Mix", norm: "hot_start_endpoint_PCR" },
-            ]}
-            citation="Engine: thermal_profile equality check"
-            savings="Saves 1 thermocycler run · ~0.4 kWh"
-          />
-          <RecommendationCard
-            impact="Medium"
-            accent="moss"
-            title="Share Proteinase K aliquot across two extractions"
-            body="Both DNA extractions call for Proteinase K within a 3-hour window. Single aliquot covers both without exceeding stability at 25 °C."
-            vendorTerms={[
-              { raw: "Proteinase K", norm: "proteinase_k" },
-              { raw: "QIAGEN Protease", norm: "proteinase_k" },
-            ]}
-            citation="EPA CompTox · CASRN 39450-01-6 · reagent_stability: 4h @ 25°C"
-            savings="Saves 120 µL enzyme · 1 prep event"
-          />
-        </div>
+        ) : (
+          <div className="space-y-4">
+            {plan.coordinations.map((c) => (
+              <RecommendationCard key={c.id} coord={c} />
+            ))}
+          </div>
+        )}
       </SectionCard>
 
       {/* Separation warnings */}
@@ -121,28 +105,33 @@ export default function CoordinateTab({ data }: { data: Submission | null }) {
           Separation warnings
         </p>
         <h3 className="mt-1 font-display text-2xl font-semibold text-clay-700 md:text-3xl">
-          These waste streams must stay apart
+          {plan.separations.length === 0
+            ? "No incompatible waste streams detected"
+            : "These waste streams must stay apart"}
         </h3>
         <p className="mt-2 max-w-2xl text-sm text-clay-700/80">
           Incompatible streams are flagged deterministically via an RCRA
-          compatibility matrix. No LLM near safety-relevant decisions.
+          compatibility matrix. No LLM near safety-relevant decisions — the
+          narrator only authors the prose around the codes.
         </p>
-        <div className="mt-6 space-y-4">
-          <WarningCard
-            title="Buffer AL waste must not mix with gel decontamination bleach"
-            reason="Chaotropic salts react with hypochlorite to release hazardous gas. Keep Buffer AL waste in a dedicated container labeled &lsquo;chaotropic, bleach-incompatible.&rsquo;"
-            citation="EPA RCRA · guanidinium thiocyanate incompatibility · OSHA chemical hygiene"
-          />
-          <WarningCard
-            title="Phenol-chloroform (halogenated organic) must not enter aqueous waste"
-            reason="Halogenated organics require a separate stream per RCRA F-list classification. Label as F002/F003 halogenated waste."
-            citation="EPA RCRA F-list · CompTox CASRN 108-95-2 / 67-66-3"
-          />
-        </div>
+        {plan.separations.length === 0 ? (
+          <p className="mt-6 text-sm italic text-clay-700/70">
+            Your week is clean: every reagent pair across the three operators is
+            compatible at the bench-disposal level.
+          </p>
+        ) : (
+          <div className="mt-6 space-y-4">
+            {plan.separations.map((s) => (
+              <WarningCard key={s.id} sep={s} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
 }
+
+/* ---------- Metric tile ---------- */
 
 function Metric({ big, label }: { big: string; label: string }) {
   return (
@@ -157,28 +146,25 @@ function Metric({ big, label }: { big: string; label: string }) {
   );
 }
 
-function RecommendationCard({
-  impact,
-  accent,
-  title,
-  body,
-  vendorTerms,
-  citation,
-  savings,
-}: {
-  impact: "High" | "Medium" | "Low";
-  accent: "moss" | "ocean";
-  title: string;
-  body: string;
-  vendorTerms: { raw: string; norm: string }[];
-  citation: string;
-  savings: string;
-}) {
-  const [showTerms, setShowTerms] = useState(false);
+/* ---------- Recommendation card ---------- */
+
+function RecommendationCard({ coord }: { coord: NarratedCoordination }) {
+  const [showWho, setShowWho] = useState(false);
   const [showWhy, setShowWhy] = useState(false);
 
-  const stripe =
-    accent === "moss" ? "bg-moss-500" : "bg-ocean-400";
+  const accent: "moss" | "ocean" =
+    coord.type === "shared_reagent_prep" ? "moss" : "ocean";
+
+  // Impact bucket: prefer hazardous disposal avoided > runs saved > volume.
+  const impact: "High" | "Medium" | "Low" = (() => {
+    const s = coord.savings;
+    if ((s.hazardous_disposal_events_avoided ?? 0) >= 1) return "High";
+    if ((s.runs_saved ?? 0) >= 1) return "Medium";
+    if ((s.volume_ml ?? 0) >= 10) return "Medium";
+    return "Low";
+  })();
+
+  const stripe = accent === "moss" ? "bg-moss-500" : "bg-ocean-400";
   const impactCls =
     impact === "High"
       ? "bg-moss-100 text-moss-700"
@@ -186,28 +172,41 @@ function RecommendationCard({
       ? "bg-ocean-100 text-ocean-700"
       : "bg-sand-200 text-clay-600";
 
+  const peopleNames = uniq(coord.participants.map((p) => p.person));
+
   return (
     <article className="relative overflow-hidden rounded-2xl border border-forest-700/10 bg-white/80 p-5 md:p-6">
       <div className={`absolute left-0 top-0 h-full w-1.5 ${stripe}`} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h4 className="font-display text-lg font-semibold text-forest-800 md:text-xl">
-          {title}
+          {coord.prose.headline}
         </h4>
-        <span
-          className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${impactCls}`}
-        >
-          {impact} impact
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          {!coord.aligned && (
+            <span className="rounded-full bg-clay-400/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-clay-600">
+              advisory
+            </span>
+          )}
+          <span
+            className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${impactCls}`}
+          >
+            {impact} impact
+          </span>
+        </div>
       </div>
-      <p className="mt-2 text-sm leading-relaxed text-forest-800/75">{body}</p>
-      <p className="mt-3 text-xs font-medium text-moss-700">{savings}</p>
+      <p className="mt-2 text-sm leading-relaxed text-forest-800/75">
+        {coord.prose.body}
+      </p>
+      <p className="mt-3 text-xs font-medium text-moss-700">
+        {coord.prose.savings_phrase}
+      </p>
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs">
         <button
-          onClick={() => setShowTerms((v) => !v)}
+          onClick={() => setShowWho((v) => !v)}
           className="rounded-full border border-forest-700/15 bg-white px-3 py-1 font-medium text-forest-800 transition hover:bg-forest-700 hover:text-sand-50"
         >
-          {showTerms ? "Hide vendor terms" : "Show vendor terms"}
+          {showWho ? "Hide participants" : `Show participants (${peopleNames.length})`}
         </button>
         <button
           onClick={() => setShowWhy((v) => !v)}
@@ -217,17 +216,22 @@ function RecommendationCard({
         </button>
       </div>
 
-      {showTerms && (
+      {showWho && (
         <div className="mt-4 rounded-xl bg-forest-700/5 p-4 text-xs">
           <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-forest-800/55">
-            Vendor term normalization
+            Participants
           </p>
           <ul className="space-y-1 font-mono text-forest-800/80">
-            {vendorTerms.map((t) => (
-              <li key={t.raw}>
-                <span className="text-clay-600">{t.raw}</span>
-                <span className="mx-2 text-forest-800/40">→</span>
-                <span className="text-moss-700">{t.norm}</span>
+            {coord.participants.map((p) => (
+              <li key={p.task_id}>
+                <span className="text-clay-600">{p.person}</span>
+                <span className="mx-2 text-forest-800/40">·</span>
+                <span className="text-moss-700">{p.task_id}</span>
+                {typeof p.volume_ul === "number" && (
+                  <span className="ml-2 text-forest-800/55">
+                    {(p.volume_ul / 1000).toFixed(2)} mL
+                  </span>
+                )}
               </li>
             ))}
           </ul>
@@ -236,29 +240,74 @@ function RecommendationCard({
       {showWhy && (
         <div className="mt-3 rounded-xl bg-ocean-100/40 p-4 text-xs text-forest-800/80">
           <p className="mb-1 text-[10px] uppercase tracking-[0.2em] text-forest-800/55">
-            EPA citation
+            Engine rationale
           </p>
-          {citation}
+          {coord.rationale.length === 0 ? (
+            <p className="italic text-forest-800/55">
+              No rationale strings emitted by the engine for this coordination.
+            </p>
+          ) : (
+            <ul className="space-y-1">
+              {coord.rationale.map((r, i) => (
+                <li key={i}>• {r}</li>
+              ))}
+            </ul>
+          )}
+          {coord.citations.length > 0 && (
+            <div className="mt-3">
+              <p className="mb-1 text-[10px] uppercase tracking-[0.2em] text-forest-800/55">
+                EPA citations
+              </p>
+              <ul className="space-y-1.5">
+                {coord.citations.map((c, i) => (
+                  <li key={i} className="flex flex-col">
+                    <span className="font-mono text-[11px]">
+                      {c.reagent}
+                      {c.rcra_code ? (
+                        <span className="ml-2 rounded bg-forest-700/10 px-1.5 py-0.5 text-[10px] text-forest-800">
+                          RCRA {c.rcra_code}
+                        </span>
+                      ) : null}
+                    </span>
+                    {c.sources.map((src) => (
+                      <a
+                        key={src}
+                        href={src}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-3 truncate text-[11px] text-ocean-700 hover:underline"
+                      >
+                        {src}
+                      </a>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </article>
   );
 }
 
-function WarningCard({
-  title,
-  reason,
-  citation,
-}: {
-  title: string;
-  reason: string;
-  citation: string;
-}) {
+/* ---------- Warning card ---------- */
+
+function WarningCard({ sep }: { sep: NarratedSeparation }) {
+  const severityCls =
+    sep.severity === "critical"
+      ? "bg-clay-500"
+      : sep.severity === "warning"
+      ? "bg-clay-400"
+      : sep.severity === "check"
+      ? "bg-ocean-400"
+      : "bg-sand-200";
+
   return (
     <article className="relative overflow-hidden rounded-2xl border border-clay-400/30 bg-white/85 p-5 md:p-6">
-      <div className="absolute left-0 top-0 h-full w-1.5 bg-clay-500" />
+      <div className={`absolute left-0 top-0 h-full w-1.5 ${severityCls}`} />
       <div className="flex items-start gap-3">
-        <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-clay-500 text-sand-50">
+        <span className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sand-50 ${severityCls}`}>
           <svg
             viewBox="0 0 24 24"
             className="h-3.5 w-3.5"
@@ -273,18 +322,71 @@ function WarningCard({
             <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
           </svg>
         </span>
-        <div>
-          <h4
-            className="font-display text-lg font-semibold text-clay-700"
-            dangerouslySetInnerHTML={{ __html: title }}
-          />
-          <p
-            className="mt-2 text-sm leading-relaxed text-clay-700/85"
-            dangerouslySetInnerHTML={{ __html: reason }}
-          />
-          <p className="mt-3 text-xs text-clay-600/80">{citation}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="font-display text-lg font-semibold text-clay-700">
+              {sep.prose.headline}
+            </h4>
+            <span className="rounded-full bg-clay-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-clay-600">
+              {sep.severity}
+            </span>
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-clay-700/85">
+            {sep.prose.body}
+          </p>
+          {sep.citations.length > 0 && (
+            <ul className="mt-3 space-y-1 text-xs text-clay-600/80">
+              {sep.citations.map((c, i) => (
+                <li key={i}>
+                  <span className="font-mono">{c.waste_group}</span>
+                  {c.rcra_code && (
+                    <span className="ml-2 rounded bg-clay-400/15 px-1.5 py-0.5 text-[10px]">
+                      RCRA {c.rcra_code}
+                    </span>
+                  )}
+                  {c.sources[0] && (
+                    <a
+                      href={c.sources[0]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-2 text-ocean-700 hover:underline"
+                    >
+                      source
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </article>
   );
+}
+
+/* ---------- Empty state ---------- */
+
+function EmptyMessage({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-forest-700/15 bg-white/40 px-5 py-8 text-center">
+      <p className="font-display text-lg font-semibold text-forest-800/80">
+        {title}
+      </p>
+      <p className="mx-auto mt-2 max-w-md text-sm text-forest-800/55">{body}</p>
+    </div>
+  );
+}
+
+/* ---------- helpers ---------- */
+
+function formatVolume(ml: number): string {
+  if (ml === 0) return "0 mL";
+  if (ml < 1) return `${(ml * 1000).toFixed(0)} µL`;
+  if (ml < 10) return `${ml.toFixed(1)} mL`;
+  if (ml >= 1000) return `${(ml / 1000).toFixed(1)} L`;
+  return `${Math.round(ml)} mL`;
+}
+
+function uniq<T>(xs: T[]): T[] {
+  return Array.from(new Set(xs));
 }

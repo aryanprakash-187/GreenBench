@@ -9,14 +9,20 @@
     "start": "next start",
     "lint": "next lint",
     "epa:build": "tsx scripts/build-epa-cache.ts",
-    "epa:build:dry": "tsx scripts/build-epa-cache.ts -- --dry-run"
+    "epa:build:dry": "tsx scripts/build-epa-cache.ts -- --dry-run",
+    "llm:test": "tsx scripts/test-llm-layer.ts",
+    "llm:test:live": "tsx scripts/test-llm-layer.ts --llm",
+    "narrate:test": "tsx scripts/test-narrate.ts",
+    "narrate:test:live": "tsx scripts/test-narrate.ts --llm"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "csv-parse": "^5.5.6",
+    "dotenv": "^16.4.5",
     "next": "14.2.5",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "csv-parse": "^5.5.6",
-    "dotenv": "^16.4.5"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "20.12.12",

@@ -12,3 +12,9 @@ out/
 build/
 .env.local
 .env*.local
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Local PDFs (e.g. DATA_OWNER_README.md.pdf)
+*.pdf

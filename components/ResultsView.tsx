@@ -6,17 +6,14 @@ import PlanTab from "@/app/results/tabs/PlanTab";
 import CoordinateTab from "@/app/results/tabs/CoordinateTab";
 import ExportTab from "@/app/results/tabs/ExportTab";
 
-type FileStub = { name: string; size: number } | null;
-export type PersonStub = {
-  name: string;
-  protocol: FileStub;
-  schedule: FileStub;
-  sampleCount: string;
-};
-export type Submission = {
-  people: PersonStub[];
-  submittedAt: string;
-};
+import type { Submission } from "@/components/HomeForm";
+
+// Re-export for the tab components (existing import sites use this path).
+export type {
+  Submission,
+  SubmissionPersonInput,
+  SubmissionProtocolInput,
+} from "@/components/HomeForm";
 
 const TABS = [
   { id: "plan", label: "Plan", blurb: "Parsed inputs and week outline" },
@@ -29,15 +26,33 @@ type TabId = (typeof TABS)[number]["id"];
 export default function ResultsView() {
   const [tab, setTab] = useState<TabId>("plan");
   const [data, setData] = useState<Submission | null>(null);
+  const [loadState, setLoadState] = useState<"loading" | "ok" | "missing">(
+    "loading"
+  );
 
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem("greenbench.submission");
-      if (raw) setData(JSON.parse(raw) as Submission);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Submission;
+        if (parsed && parsed.plan && Array.isArray(parsed.people)) {
+          setData(parsed);
+          setLoadState("ok");
+          return;
+        }
+      }
+      setLoadState("missing");
     } catch {
-      // ignore
+      setLoadState("missing");
     }
   }, []);
+
+  const peopleNames =
+    data?.people
+      ?.map((p) => p.name)
+      .filter((n) => n && n.trim().length > 0) ?? [];
+  const totalProtocols =
+    data?.people.reduce((n, p) => n + p.protocols.length, 0) ?? 0;
 
   return (
     <div className="min-h-screen bg-sand-50 text-forest-900">
@@ -79,33 +94,30 @@ export default function ResultsView() {
               Planning for
             </p>
             <h1 className="font-display text-2xl font-semibold text-forest-800 md:text-3xl">
-              {(() => {
-                const names =
-                  data?.people
-                    ?.map((p) => p.name)
-                    .filter((n) => n && n.trim().length > 0) ?? [];
-                if (names.length === 0) return "your lab";
-                if (names.length === 1) return names[0];
-                if (names.length === 2) return `${names[0]} & ${names[1]}`;
-                return `${names.slice(0, -1).join(", ")} & ${names[names.length - 1]}`;
-              })()}
+              {peopleNames.length === 0
+                ? "your lab"
+                : peopleNames.length === 1
+                ? peopleNames[0]
+                : peopleNames.length === 2
+                ? `${peopleNames[0]} & ${peopleNames[1]}`
+                : `${peopleNames.slice(0, -1).join(", ")} & ${peopleNames[peopleNames.length - 1]}`}
             </h1>
+            {data?.plan?.headline_tagline && (
+              <p className="mt-2 max-w-2xl text-sm text-forest-800/70">
+                {data.plan.headline_tagline}
+              </p>
+            )}
           </div>
           <div className="flex flex-wrap gap-3 text-xs">
-            <Chip
-              label="People"
-              value={`${
-                data?.people.filter(
-                  (p) => p.name.trim() && p.protocol && p.schedule
-                ).length ?? 0
-              } / 3`}
-              accent="moss"
-            />
-            <Chip
-              label="Protocols"
-              value={`${data?.people.filter((p) => p.protocol).length ?? 0} / 3`}
-              accent="ocean"
-            />
+            <Chip label="People" value={`${peopleNames.length} / 3`} accent="moss" />
+            <Chip label="Protocols" value={`${totalProtocols}`} accent="ocean" />
+            {data?.plan?.schedule && (
+              <Chip
+                label="Scheduled"
+                value={`${data.plan.schedule.length}`}
+                accent="sand"
+              />
+            )}
             {data?.submittedAt && (
               <Chip
                 label="Submitted"
@@ -155,17 +167,56 @@ export default function ResultsView() {
 
       {/* Tab panels */}
       <main className="mx-auto max-w-6xl px-6 py-10">
-        {tab === "plan" && <PlanTab data={data} />}
-        {tab === "coordinate" && <CoordinateTab data={data} />}
-        {tab === "export" && <ExportTab data={data} />}
+        {loadState === "loading" && <LoadingState />}
+        {loadState === "missing" && <MissingState />}
+        {loadState === "ok" && data && (
+          <>
+            {tab === "plan" && <PlanTab data={data} />}
+            {tab === "coordinate" && <CoordinateTab data={data} />}
+            {tab === "export" && <ExportTab data={data} />}
+          </>
+        )}
       </main>
 
       <footer className="border-t border-forest-700/10 bg-white/50 py-8">
         <div className="mx-auto max-w-6xl px-6 text-center text-xs text-forest-800/55">
-          Green Bench · Hazard data grounded in EPA TRI, CompTox
-          &amp; RCRA classifications.
+          Green Bench · Hazard data grounded in EPA TRI, CompTox &amp; RCRA
+          classifications.{" "}
+          {data?.plan?.narration?.generated === false && (
+            <span className="ml-1 italic text-forest-800/45">
+              (narration: deterministic fallback — {data.plan.narration.fallback_reason})
+            </span>
+          )}
         </div>
       </footer>
+    </div>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="rounded-3xl border border-forest-700/10 bg-white/70 px-6 py-16 text-center text-sm text-forest-800/60">
+      Loading your plan…
+    </div>
+  );
+}
+
+function MissingState() {
+  return (
+    <div className="rounded-3xl border border-forest-700/10 bg-white/70 px-6 py-16 text-center">
+      <p className="font-display text-xl font-semibold text-forest-800">
+        No plan in this browser session.
+      </p>
+      <p className="mx-auto mt-3 max-w-md text-sm text-forest-800/65">
+        We couldn&rsquo;t find a recent submission. Head back to the form,
+        upload your schedules and protocols, and submit again.
+      </p>
+      <Link
+        href="/"
+        className="mt-6 inline-flex rounded-full bg-forest-700 px-6 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-sand-50 transition hover:bg-forest-800"
+      >
+        Back to form
+      </Link>
     </div>
   );
 }
