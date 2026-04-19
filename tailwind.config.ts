@@ -83,7 +83,7 @@ const config: Config = {
       },
       backgroundImage: {
         "earth-hero":
-          "radial-gradient(ellipse at 20% 10%, rgba(93,138,168,0.35), transparent 55%), radial-gradient(ellipse at 80% 90%, rgba(75,96,56,0.55), transparent 55%), linear-gradient(180deg, #1b2c20 0%, #253a2a 55%, #284659 100%)",
+          "radial-gradient(ellipse at 15% 20%, rgba(93,138,168,0.55), transparent 55%), radial-gradient(ellipse at 85% 75%, rgba(75,96,56,0.6), transparent 55%), radial-gradient(ellipse at 50% 100%, rgba(50,90,120,0.55), transparent 60%), linear-gradient(160deg, #0f1f1a 0%, #15302c 30%, #1d3a47 60%, #25506a 100%)",
         "earth-home":
           "radial-gradient(ellipse at 80% 0%, rgba(130,167,191,0.25), transparent 55%), linear-gradient(180deg, #f3ead7 0%, #e6d7b8 100%)",
       },

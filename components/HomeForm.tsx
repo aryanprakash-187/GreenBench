@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { Footer } from "@/components/OverviewPage";
 
 type Person = {
   name: string;
@@ -18,13 +18,14 @@ const EMPTY_PERSON: Person = {
 };
 
 export default function HomeForm() {
-  const router = useRouter();
   const [people, setPeople] = useState<Person[]>([
     { ...EMPTY_PERSON },
     { ...EMPTY_PERSON },
     { ...EMPTY_PERSON },
   ]);
   const [submitting, setSubmitting] = useState(false);
+  const [launched, setLaunched] = useState(false);
+  const [popupBlocked, setPopupBlocked] = useState(false);
 
   function updatePerson(index: number, patch: Partial<Person>) {
     setPeople((prev) => {
@@ -54,12 +55,38 @@ export default function HomeForm() {
     };
 
     try {
-      sessionStorage.setItem("greenbench.submission", JSON.stringify(payload));
+      // localStorage (not sessionStorage) so new tabs can read the data.
+      localStorage.setItem("greenbench.submission", JSON.stringify(payload));
     } catch {
       // ignore storage errors
     }
 
-    router.push("/results");
+    // Submit / Resubmit only opens the Overview tab (Step 2). The Finalized
+    // Schedules tab (Step 3) is opened from the Next button on the Overview
+    // page, not here. This keeps the flow linear: Step 1 → Step 2 → Step 3.
+    const overview = window.open("/overview", "_blank", "noopener,noreferrer");
+    try {
+      overview?.focus();
+    } catch {
+      // ignore: browser may refuse focus
+    }
+
+    if (!overview) {
+      setPopupBlocked(true);
+    }
+
+    setLaunched(true);
+    setSubmitting(false);
+  }
+
+  function reopenTabs() {
+    const overview = window.open("/overview", "_blank", "noopener,noreferrer");
+    try {
+      overview?.focus();
+    } catch {
+      // ignore
+    }
+    if (overview) setPopupBlocked(false);
   }
 
   // Require every person to have all four fields filled out.
@@ -95,8 +122,8 @@ export default function HomeForm() {
             Fill in the fields below to start
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-forest-800/70">
-            Add up to three people. For each person, give their name, upload
-            their lab protocol, their calendar as an{" "}
+            Add up to three labmates. For each labmate, give their name,
+            upload their lab protocol, their calendar as an{" "}
             <code className="font-mono text-xs">.ics</code> file, and their
             intended number of samples in their experiment. We&rsquo;ll find
             overlaps.
@@ -124,7 +151,7 @@ export default function HomeForm() {
               disabled={!canSubmit}
               className="group inline-flex items-center gap-3 rounded-full bg-forest-700 px-10 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-sand-50 shadow-soft transition enabled:hover:bg-forest-800 enabled:active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <span>Submit</span>
+              <span>{launched ? "Resubmit" : "Submit"}</span>
               <svg
                 className="h-4 w-4 transition group-enabled:group-hover:translate-x-1"
                 viewBox="0 0 24 24"
@@ -144,11 +171,57 @@ export default function HomeForm() {
                 : `Fill in every field for all 3 people to continue. (${filledCount} of 3 complete.)`}
             </p>
           </div>
+
+          {/* Launched confirmation */}
+          {launched && (
+            <div className="mt-6 rounded-2xl border border-moss-500/30 bg-moss-50/80 p-5 text-center">
+              {popupBlocked ? (
+                <>
+                  <p className="text-sm font-semibold text-forest-800">
+                    Your browser blocked the Overview tab.
+                  </p>
+                  <p className="mt-1 text-xs text-forest-800/70">
+                    Allow pop-ups for this site, or click below to open it
+                    manually.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={reopenTabs}
+                    className="mt-3 inline-flex items-center gap-2 rounded-full bg-forest-700 px-5 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-sand-50 transition hover:bg-forest-800"
+                  >
+                    Open Overview
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-forest-800">
+                    Overview opened in a new tab. Use the Next button there to
+                    continue to Finalized Schedules.
+                  </p>
+                  <p className="mt-1 text-xs text-forest-800/70">
+                    Didn&rsquo;t see it? Check that your browser allows pop-ups
+                    from this site.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={reopenTabs}
+                    className="mt-3 inline-flex items-center gap-2 rounded-full border border-forest-700/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-forest-800 transition hover:bg-forest-700 hover:text-sand-50"
+                  >
+                    Reopen Overview
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </form>
 
         <p className="mt-8 text-center text-xs text-forest-800/50">
           Your files stay in your browser — Green Bench is stateless.
         </p>
+      </div>
+
+      <div className="relative z-10 mt-20">
+        <Footer />
       </div>
     </section>
   );
@@ -194,7 +267,7 @@ function PersonBlock({
           </span>
           <div>
             <h3 className="font-display text-xl font-semibold text-forest-800">
-              Person {index + 1}
+              Labmate {index + 1}
             </h3>
             <p className="text-xs text-forest-800/55">
               Name, lab protocol, schedule, and number of intended samples
@@ -227,7 +300,7 @@ function PersonBlock({
             type="text"
             value={person.name}
             onChange={(e) => onChange({ name: e.target.value })}
-            placeholder={index === 0 ? "e.g. Sohini" : `Person ${index + 1}`}
+            placeholder={index === 0 ? "e.g. Sohini" : `Labmate ${index + 1}`}
             className="w-full rounded-xl border border-forest-700/15 bg-white/90 px-4 py-3 text-sm text-forest-900 outline-none transition placeholder:text-forest-900/35 focus:border-moss-500 focus:ring-4 focus:ring-moss-400/20"
           />
         </div>
