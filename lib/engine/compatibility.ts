@@ -126,7 +126,12 @@ function citationForGroup(
 ) {
   const entry = epa[group];
   if (!entry) return null;
-  const casEntries: { cas: string; name?: string; role?: string }[] = [];
+  const casEntries: {
+    cas: string;
+    name?: string;
+    role?: string;
+    dtxsid?: string;
+  }[] = [];
   for (const item of entry.cas_numbers_involved ?? []) {
     if (typeof item === 'string') {
       if (item.trim()) casEntries.push({ cas: item.trim() });
@@ -135,6 +140,7 @@ function citationForGroup(
         cas: item.cas.trim(),
         ...(item.name ? { name: item.name } : {}),
         ...(item.role ? { role: item.role } : {}),
+        ...(item.dtxsid ? { dtxsid: item.dtxsid } : {}),
       });
     }
   }
@@ -143,6 +149,7 @@ function citationForGroup(
     rcra_code: entry.rcra_code ?? null,
     sources: entry.sources ?? [],
     cas_entries: casEntries,
+    is_tri_listed: entry.tri_reportable === true,
   };
 }
 

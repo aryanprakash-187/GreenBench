@@ -134,6 +134,9 @@ export interface EpaCasEntry {
   cas: string;
   name?: string;
   role?: string;
+  /** Optional EPA CompTox DTXSID. Populated when the build script (or the data
+   *  team) has a CompTox CCTE API key; absent on bucket-level screening entries. */
+  dtxsid?: string;
 }
 
 interface EpaCacheLegacyEntry {

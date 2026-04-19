@@ -309,7 +309,8 @@ function ImpactSummarySection({
 /* ---------- Recommendations ---------- */
 
 function RecommendationCard({ coord }: { coord: NarratedCoordination }) {
-  const [showDetails, setShowDetails] = useState(false);
+  const [showRationale, setShowRationale] = useState(false);
+  const [showCitations, setShowCitations] = useState(false);
 
   const accent: "moss" | "ocean" =
     coord.type === "shared_reagent_prep" ? "moss" : "ocean";
@@ -330,10 +331,10 @@ function RecommendationCard({ coord }: { coord: NarratedCoordination }) {
     <article className="relative overflow-hidden rounded-2xl border border-forest-700/10 bg-white/85 p-5 md:p-6">
       <div className={`absolute left-0 top-0 h-full w-1.5 ${stripe}`} />
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <h4 className="font-display text-base font-semibold leading-snug text-forest-800 md:text-lg">
+        <h4 className="min-w-0 flex-1 break-words font-display text-base font-semibold leading-snug text-forest-800 [overflow-wrap:anywhere] md:text-lg">
           {coord.prose.headline || coord.recommendation}
         </h4>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <span
             className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${impactCls}`}
           >
@@ -373,14 +374,28 @@ function RecommendationCard({ coord }: { coord: NarratedCoordination }) {
         </p>
       )}
 
-      <button
-        onClick={() => setShowDetails((v) => !v)}
-        className="mt-4 text-xs font-medium text-forest-800/70 underline decoration-forest-800/25 underline-offset-4 transition hover:text-forest-800 hover:decoration-forest-800"
-      >
-        {showDetails ? "Hide details" : "Show engine rationale & EPA citations"}
-      </button>
+      <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+        <button
+          onClick={() => setShowRationale((v) => !v)}
+          aria-expanded={showRationale}
+          className="text-xs font-medium text-forest-800/70 underline decoration-forest-800/25 underline-offset-4 transition hover:text-forest-800 hover:decoration-forest-800"
+        >
+          {showRationale ? "Hide engine rationale" : "Show engine rationale"}
+        </button>
+        {coord.citations.length > 0 && (
+          <button
+            onClick={() => setShowCitations((v) => !v)}
+            aria-expanded={showCitations}
+            className="text-xs font-medium text-forest-800/70 underline decoration-forest-800/25 underline-offset-4 transition hover:text-forest-800 hover:decoration-forest-800"
+          >
+            {showCitations
+              ? "Hide EPA citations"
+              : `Show EPA citations (${coord.citations.length})`}
+          </button>
+        )}
+      </div>
 
-      {showDetails && (
+      {showRationale && (
         <div className="mt-3 space-y-4 rounded-xl bg-forest-700/5 p-4 text-xs text-forest-800/80">
           {coord.rationale.length > 0 && (
             <div>
@@ -417,19 +432,19 @@ function RecommendationCard({ coord }: { coord: NarratedCoordination }) {
               </ul>
             </div>
           )}
+        </div>
+      )}
 
-          {coord.citations.length > 0 && (
-            <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-forest-800/55">
-                EPA citations
-              </p>
-              <ul className="space-y-3">
-                {coord.citations.map((cite, i) => (
-                  <CitationItem key={i} cite={cite} />
-                ))}
-              </ul>
-            </div>
-          )}
+      {showCitations && coord.citations.length > 0 && (
+        <div className="mt-3 rounded-xl bg-ocean-100/40 p-4 text-xs text-forest-800/80">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-forest-800/55">
+            EPA citations
+          </p>
+          <ul className="space-y-3">
+            {coord.citations.map((cite, i) => (
+              <CitationItem key={i} cite={cite} />
+            ))}
+          </ul>
         </div>
       )}
     </article>
@@ -441,13 +456,20 @@ function CitationItem({
 }: {
   cite: NarratedCoordination["citations"][number];
 }) {
-  const nonCasSources = cite.sources.filter(
-    (s) => !/[?&]search=\d/.test(s) && !/CASRN\/\d/.test(s)
-  );
   return (
     <li className="rounded-lg border border-ocean-400/20 bg-white/70 p-3">
       <div className="flex flex-wrap items-baseline gap-2">
-        <span className="font-medium text-forest-800">{cite.reagent}</span>
+        <span className="break-words font-medium text-forest-800 [overflow-wrap:anywhere]">
+          {cite.reagent}
+        </span>
+        {cite.is_tri_listed && (
+          <span
+            className="rounded bg-clay-400/20 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-clay-700"
+            title="EPA TRI-listed chemical (cross-verify via the TRI link in the page footer)"
+          >
+            TRI listed
+          </span>
+        )}
         {cite.rcra_code && (
           <span className="rounded bg-clay-400/20 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-clay-700">
             RCRA {cite.rcra_code}
@@ -457,17 +479,15 @@ function CitationItem({
       {cite.cas_entries.length > 0 && (
         <ul className="mt-2 space-y-0.5">
           {cite.cas_entries.map((cas, j) => (
-            <li key={j} className="text-[11px] leading-snug">
-              <a
-                href={`https://comptox.epa.gov/dashboard/chemical/details/search?search=${encodeURIComponent(
-                  cas.cas,
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono font-semibold text-ocean-700 underline decoration-ocean-400/40 underline-offset-2 hover:decoration-ocean-700"
-              >
+            <li key={j} className="break-words text-[11px] leading-snug [overflow-wrap:anywhere]">
+              <span className="font-mono font-semibold text-forest-800">
                 CAS {cas.cas}
-              </a>
+              </span>
+              {cas.dtxsid && (
+                <span className="ml-1.5 font-mono text-[10px] text-forest-800/65">
+                  · DTXSID {cas.dtxsid}
+                </span>
+              )}
               {cas.name && (
                 <span className="text-forest-800/75"> · {cas.name}</span>
               )}
@@ -478,32 +498,8 @@ function CitationItem({
           ))}
         </ul>
       )}
-      {nonCasSources.length > 0 && (
-        <ul className="mt-2 space-y-0.5 text-[10px] text-forest-800/55">
-          {nonCasSources.map((s, j) => (
-            <li key={j}>
-              <a
-                href={s}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline decoration-forest-800/25 underline-offset-2 hover:decoration-forest-800"
-              >
-                {prettySourceLabel(s)}
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
     </li>
   );
-}
-
-function prettySourceLabel(url: string): string {
-  if (/defining-characteristic-ignitability/.test(url))
-    return "EPA · RCRA ignitability (D001) characteristic";
-  if (/defining-hazardous-waste/.test(url))
-    return "EPA · Defining hazardous waste (RCRA framework)";
-  return url;
 }
 
 function shortTaskId(taskId: string): string {
@@ -640,6 +636,14 @@ function WarningCard({ sep }: { sep: NarratedSeparation }) {
                     <span className="font-mono font-medium">
                       {c.waste_group}
                     </span>
+                    {c.is_tri_listed && (
+                      <span
+                        className="rounded bg-clay-400/20 px-1.5 py-0.5 font-mono text-[10px] font-semibold"
+                        title="EPA TRI-listed chemical (cross-verify via the TRI link in the page footer)"
+                      >
+                        TRI listed
+                      </span>
+                    )}
                     {c.rcra_code && (
                       <span className="rounded bg-clay-400/20 px-1.5 py-0.5 font-mono text-[10px] font-semibold">
                         RCRA {c.rcra_code}
@@ -649,17 +653,18 @@ function WarningCard({ sep }: { sep: NarratedSeparation }) {
                   {c.cas_entries.length > 0 && (
                     <ul className="mt-1.5 space-y-0.5">
                       {c.cas_entries.map((cas, j) => (
-                        <li key={j}>
-                          <a
-                            href={`https://comptox.epa.gov/dashboard/chemical/details/search?search=${encodeURIComponent(
-                              cas.cas,
-                            )}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-mono font-semibold text-ocean-700 underline decoration-ocean-400/40 underline-offset-2 hover:decoration-ocean-700"
-                          >
+                        <li
+                          key={j}
+                          className="break-words [overflow-wrap:anywhere]"
+                        >
+                          <span className="font-mono font-semibold text-clay-700">
                             CAS {cas.cas}
-                          </a>
+                          </span>
+                          {cas.dtxsid && (
+                            <span className="ml-1.5 font-mono text-[10px] text-clay-700/65">
+                              · DTXSID {cas.dtxsid}
+                            </span>
+                          )}
                           {cas.name && (
                             <span className="text-clay-700/75"> · {cas.name}</span>
                           )}

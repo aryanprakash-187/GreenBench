@@ -114,6 +114,9 @@ export interface HazardCas {
   cas: string;
   name?: string;
   role?: string;
+  /** EPA CompTox DTXSID, when the data layer has it. Rendered as a plain-text ID
+   *  for manual cross-verification; CompTox deep-links are keyed off the CAS. */
+  dtxsid?: string;
 }
 
 /** EPA-derived hazard summary for one reagent, drawn from /data/epa_cache.json. */
@@ -134,6 +137,11 @@ export interface ReagentHazardSummary {
   /** Specific CAS-identified chemicals in this waste group. Populated from
    *  `cas_numbers_involved` in epa_cache.json; always an array (possibly empty). */
   cas_entries: HazardCas[];
+  /** True when EPA TRI flags at least one chemical in this bucket as reportable.
+   *  Sourced from `tri_reportable` in epa_cache.json. UI renders a plain "TRI
+   *  listed" badge; cross-verification is manual via the TRI-listed chemicals
+   *  page (linked in the footer). */
+  is_tri_listed: boolean;
 }
 
 /** A single reagent inside a hydrated protocol, with everything the engine needs. */
@@ -309,6 +317,8 @@ export interface CoordinationCitation {
   sources: string[];
   /** Specific CAS-identified chemicals that drive the hazard classification. */
   cas_entries: HazardCas[];
+  /** True when EPA TRI lists at least one chemical in this bucket as reportable. */
+  is_tri_listed: boolean;
 }
 
 export interface CoordinationSavings {
@@ -349,6 +359,7 @@ export interface Separation {
     rcra_code: string | null;
     sources: string[];
     cas_entries: HazardCas[];
+    is_tri_listed: boolean;
   }[];
 }
 

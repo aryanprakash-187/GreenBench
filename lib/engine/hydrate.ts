@@ -213,14 +213,19 @@ function findHazard(epaLookupKey: string): ReagentHazardSummary | null {
     classification_by_analogy: entry.classification_by_analogy ?? false,
     sources: entry.sources ?? [],
     cas_entries: normalizeCasEntries(entry.cas_numbers_involved),
+    // tri_reportable is boolean | null | undefined in the cache; null/undefined
+    // both mean "not asserted by EPA" which we collapse to false for the UI.
+    is_tri_listed: entry.tri_reportable === true,
   };
 }
 
 function normalizeCasEntries(
-  raw: Array<string | { cas: string; name?: string; role?: string }> | undefined
-): { cas: string; name?: string; role?: string }[] {
+  raw:
+    | Array<string | { cas: string; name?: string; role?: string; dtxsid?: string }>
+    | undefined
+): { cas: string; name?: string; role?: string; dtxsid?: string }[] {
   if (!raw || !Array.isArray(raw)) return [];
-  const out: { cas: string; name?: string; role?: string }[] = [];
+  const out: { cas: string; name?: string; role?: string; dtxsid?: string }[] = [];
   for (const item of raw) {
     if (typeof item === 'string') {
       const cas = item.trim();
@@ -232,6 +237,7 @@ function normalizeCasEntries(
         cas,
         ...(item.name ? { name: item.name } : {}),
         ...(item.role ? { role: item.role } : {}),
+        ...(item.dtxsid ? { dtxsid: item.dtxsid } : {}),
       });
     }
   }
