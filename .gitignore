@@ -1,0 +1,7 @@
+.DS_Store
+.toolchain/
+.tmp-clone/
+node-lts.pkg
+.node.tar.xz
+node_modules/
+*.log
