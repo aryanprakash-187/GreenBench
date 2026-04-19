@@ -1,6 +1,7 @@
-id,type,model,capacity,block_type,settings_configurable
-thermo-c1000-a,thermocycler,Bio-Rad C1000,96,96-well,"annealing_temp_c,extension_time_s,cycles"
-centrifuge-eppendorf-1,centrifuge,Eppendorf 5424,24,tube,
-magplate-spri-96,magnet_plate_96,Agencourt SPRIPlate 96 Ring Super Magnet Plate,96,96-well,
-magrack-magjet-1,magnet_rack_tube,Thermo Scientific MagJET Separation Rack,24,tube,
-thermomixer-1,incubation_mixer,Eppendorf Thermomixer,24,tube,"temp_c,rpm"
+id,type,model,capacity,block_type,settings_configurable,notes
+thermo-c1000-a,thermocycler,Bio-Rad C1000,96,96-well,"annealing_temp,extension_time,cycles","Primary shared PCR instrument for seeded Q5, Platinum II, and JumpStart workflows. Capacity/scheduling field matches README examples."
+centrifuge-eppendorf-1,microcentrifuge,Eppendorf 5424,24,,,Primary spin-column extraction centrifuge for DNeasy and GeneJET-style workflows.
+magplate-ambion-1,magnetic_plate,Ambion 96-well,96,96-well,,Plate-format magnetic separation for AMPure XP and MagJET NGS cleanup.
+magrack-manual-1,magnetic_rack,Manual 24-tube magnetic rack,24,tube,,Tube-format magnetic separation for manual bead cleanup / genomic DNA extraction.
+heatblock-benchtop-1,heat_block,Benchtop dry bath,24,tube,temperature,Supports lysis and digestion incubations in extraction workflows.
+vortex-benchtop-1,vortex,Standard benchtop vortex mixer,1,,,"Shared support equipment. Included for completeness, though not the main batching bottleneck."

@@ -1,0 +1,4 @@
+operator_id,name,ics_filename,schedule_horizon_start,schedule_horizon_end,timezone_assumed,notes
+op1,Aryan,aryan_schedule.ics,2026-04-20,2026-04-24,floating local times,"Demo calendar with Bio Lecture, Robotics Team Meeting, A Cappella Practice, haircut, CS and Math lecture blocks."
+op2,Sohini,sohini_schedule.ics,2026-04-20,2026-04-24,floating local times,"Demo calendar with Chem, Oceanography, Physics, Dance, BMES, and Apartment Tour blocks."
+op3,Vikas,vikas_schedule.ics,2026-04-20,2026-04-24,floating local times,"Demo calendar with recurring Ecology, Cell Bio, Data Science plus Basketball Practice and Dog Shelter Volunteering."
