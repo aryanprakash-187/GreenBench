@@ -314,7 +314,6 @@ function collectReagentCitations(
       rcra_code: h.rcra_code,
       sources: h.sources,
       cas_entries: h.cas_entries ?? [],
-      is_tri_listed: h.is_tri_listed === true,
     });
   }
   return out;

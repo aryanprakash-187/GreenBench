@@ -18,6 +18,7 @@ import type {
 
 type SchedulesPageProps = {
   onBack?: () => void;
+  onReset?: () => void;
 };
 
 const ACCENTS = ["moss", "ocean", "sand"] as const;
@@ -42,7 +43,7 @@ const FAMILY_TONES: Record<string, "moss" | "ocean" | "sand"> = {
   Bead_cleanup: "sand",
 };
 
-export default function SchedulesPage({ onBack }: SchedulesPageProps = {}) {
+export default function SchedulesPage({ onBack, onReset }: SchedulesPageProps = {}) {
   const router = useRouter();
   const [data, setData] = useState<Submission | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ok" | "missing">(
@@ -109,7 +110,7 @@ export default function SchedulesPage({ onBack }: SchedulesPageProps = {}) {
 
   return (
     <div className="min-h-screen bg-white text-forest-900">
-      <TopBar onBack={onBack} />
+      <TopBar onBack={onBack} onReset={onReset} />
 
       {/* Centered title hero */}
       <section className="border-b border-forest-700/10 bg-white">

@@ -5,6 +5,7 @@ import Hero from "@/components/Hero";
 import HomeForm, { EMPTY_PERSON, type Person } from "@/components/HomeForm";
 import OverviewPage from "@/components/OverviewPage";
 import SchedulesPage from "@/components/SchedulesPage";
+import { clearSubmission } from "@/lib/submission";
 
 type Step = "plan" | "coordinate" | "export";
 
@@ -21,17 +22,29 @@ export default function Page() {
     }
   }, [step]);
 
+  function startNewPlan() {
+    clearSubmission();
+    setPeople([{ ...EMPTY_PERSON }, { ...EMPTY_PERSON }]);
+    setStep("plan");
+  }
+
   if (step === "coordinate") {
     return (
       <OverviewPage
         onBack={() => setStep("plan")}
         onNext={() => setStep("export")}
+        onReset={startNewPlan}
       />
     );
   }
 
   if (step === "export") {
-    return <SchedulesPage onBack={() => setStep("coordinate")} />;
+    return (
+      <SchedulesPage
+        onBack={() => setStep("coordinate")}
+        onReset={startNewPlan}
+      />
+    );
   }
 
   return (

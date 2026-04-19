@@ -19,9 +19,10 @@ import type {
 type OverviewPageProps = {
   onBack?: () => void;
   onNext?: () => void;
+  onReset?: () => void;
 };
 
-export default function OverviewPage({ onBack, onNext }: OverviewPageProps = {}) {
+export default function OverviewPage({ onBack, onNext, onReset }: OverviewPageProps = {}) {
   const router = useRouter();
   const [data, setData] = useState<Submission | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ok" | "missing">(
@@ -67,7 +68,7 @@ export default function OverviewPage({ onBack, onNext }: OverviewPageProps = {})
 
   return (
     <div className="min-h-screen bg-sand-50 text-forest-900">
-      <TopBar onBack={onBack} />
+      <TopBar onBack={onBack} onReset={onReset} />
 
       {/* Centered title hero */}
       <section className="border-b border-forest-700/10 bg-white/50">
@@ -697,14 +698,19 @@ function StageBlocks({
   plan: NarratedWeekPlanResult;
   data: Submission | null;
 }) {
+  // `plan.week_start_iso` is Monday 00:00 UTC. Parsing it with `new Date(...)`
+  // converts to local time, which for any timezone west of UTC (Americas)
+  // lands on SUNDAY evening local — that's exactly what caused the column
+  // header row to read "SUN MON TUE WED THU" instead of Mon–Fri. Anchor the
+  // grid at LOCAL midnight of the Monday calendar date so the first column
+  // is always Monday regardless of timezone.
   const weekStart = useMemo(
-    () => new Date(plan.week_start_iso),
+    () => parseIsoDateAsLocalMidnight(plan.week_start_iso),
     [plan.week_start_iso],
   );
 
-  // Always show 5 columns starting at the local day of weekStart, then add
-  // any extra day-offsets the schedule actually uses (Sat / Sun overflow,
-  // or under-UTC drift for users whose local week starts a day "early").
+  // Always show the five weekdays Mon–Fri, then append any extra days the
+  // schedule actually uses (Sat/Sun overflow in far-east timezones).
   const dayKeys = useMemo(() => {
     const used = new Set<number>();
     for (let i = 0; i < 5; i++) used.add(i);
@@ -838,6 +844,19 @@ function Block({ task }: { task: ScheduledTask }) {
   );
 }
 
+/** Parse the date portion (YYYY-MM-DD) of an ISO 8601 timestamp and return a
+ *  Date at LOCAL midnight on that calendar date. The engine anchors weeks at
+ *  Monday 00:00 UTC; naively parsing that with `new Date(iso)` would yield
+ *  Sunday evening in the Americas and shift every day column by one. Reading
+ *  the Y-M-D out verbatim keeps "Monday" literally Monday in the UI. */
+function parseIsoDateAsLocalMidnight(iso: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (m) {
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  }
+  return new Date(iso);
+}
+
 /** Place each task in the column of its **local** weekday relative to the
  *  local-day of weekStart. The engine plans in UTC, but the lab cares about
  *  what local day they're physically running PCR — these can diverge for
@@ -955,7 +974,12 @@ export function SectionCard({
 
 /* ---------- Top bar + footer ---------- */
 
-export function TopBar({ onBack }: { onBack?: () => void } = {}) {
+export function TopBar({
+  onBack,
+  onReset,
+}: { onBack?: () => void; onReset?: () => void } = {}) {
+  const newPlanClassName =
+    "rounded-full border border-forest-700/20 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-forest-800 transition hover:bg-forest-700 hover:text-sand-50";
   return (
     <header className="border-b border-forest-700/10 bg-sand-50/90 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
@@ -981,30 +1005,58 @@ export function TopBar({ onBack }: { onBack?: () => void } = {}) {
               </svg>
             </button>
           )}
-          <Link
-            href="/"
-            className="group flex items-center gap-3"
-            aria-label="Green Bench home"
-          >
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-forest-700 text-sand-50">
-              <LeafIcon />
-            </span>
-            <div className="leading-tight">
-              <p className="font-brand text-xl font-semibold tracking-tight text-forest-800">
-                Green Bench
-              </p>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-forest-800/55">
-                schedule for sustainability
-              </p>
-            </div>
-          </Link>
+          {onReset ? (
+            <button
+              type="button"
+              onClick={onReset}
+              className="group flex items-center gap-3"
+              aria-label="Green Bench home"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-forest-700 text-sand-50">
+                <LeafIcon />
+              </span>
+              <div className="leading-tight text-left">
+                <p className="font-brand text-xl font-semibold tracking-tight text-forest-800">
+                  Green Bench
+                </p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-forest-800/55">
+                  schedule for sustainability
+                </p>
+              </div>
+            </button>
+          ) : (
+            <Link
+              href="/"
+              className="group flex items-center gap-3"
+              aria-label="Green Bench home"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-forest-700 text-sand-50">
+                <LeafIcon />
+              </span>
+              <div className="leading-tight">
+                <p className="font-brand text-xl font-semibold tracking-tight text-forest-800">
+                  Green Bench
+                </p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-forest-800/55">
+                  schedule for sustainability
+                </p>
+              </div>
+            </Link>
+          )}
         </div>
-        <Link
-          href="/"
-          className="rounded-full border border-forest-700/20 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-forest-800 transition hover:bg-forest-700 hover:text-sand-50"
-        >
-          ← New plan
-        </Link>
+        {onReset ? (
+          <button
+            type="button"
+            onClick={onReset}
+            className={newPlanClassName}
+          >
+            ← New plan
+          </button>
+        ) : (
+          <Link href="/" className={newPlanClassName}>
+            ← New plan
+          </Link>
+        )}
       </div>
     </header>
   );
