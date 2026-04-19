@@ -45,9 +45,11 @@ Three layers:
 **EPA enrichment layer** is how reagents get their hazard profiles. For each reagent in a parsed protocol, lookup by name or CAS number against:
 - **TRI (Toxics Release Inventory)** — is this a reportable chemical, and what waste category.
 - **CompTox / IRIS APIs** — hazard classification, cancer/non-cancer endpoints, exposure data. Requires a free API key (email `ccte_api@epa.gov`).
-- **RCRA hazardous waste codes** — F-list, P-list, U-list mapping for each reagent. Determines which waste stream a protocol's outputs belong to.
+- **RCRA hazardous waste codes** — F-list, P-list, U-list mapping per reagent, used as supplementary citation. Most molecular-biology reagents in our seed set are proprietary mixes that aren't individually RCRA-listed, so the engine does **not** derive separation rules from RCRA codes directly. Instead, the actual pairwise compatibility rules live in the data lead's `waste_rules_map.csv` (`waste_group_a × waste_group_b → compatible? + severity + reason`), keyed on the same `epa_lookup_key` values used in `reagent_term_map.csv`. RCRA codes — when they exist for a chemical — get attached to a separation warning as additional citation, not as the basis of the rule.
 
 This layer is the reason the tool's outputs are defensible rather than made up.
+
+> **Demo prep TODO:** before the demo, walk through `waste_rules_map.csv` end-to-end and confirm every row reflects real EH&S guidance. The engine's separation warnings are only as trustworthy as that file. Concrete checks: (a) every `waste_group` value used in `reagent_term_map.csv`'s `epa_lookup_key` column has at least one row in `waste_rules_map.csv` for the pairs it can plausibly co-occur with, (b) every `critical` severity row really would generate a dangerous reaction (chaotropic + bleach → toxic gas, alcohol + strong oxidizer → fire, etc.), (c) every `info` row genuinely is benign to combine. If any row is wrong, the demo will either flag a non-issue or — worse — miss a real hazard.
 
 ### Data flow, end to end
 
@@ -66,7 +68,7 @@ The LLM handles what it's good at — natural language, missing-info detection, 
 
 Four distinct uses of hazard classification, in the order the engine uses them:
 
-1. **Waste-stream separation.** Incompatible waste streams cannot merge (halogenated organics vs. aqueous, oxidizers vs. organics, etc.). RCRA codes encode this. Without classification, "don't mix these" is a guess.
+1. **Waste-stream separation.** Incompatible waste streams cannot merge (halogenated organics vs. aqueous, oxidizers vs. organics, etc.). The pairwise rules come from `waste_rules_map.csv` (curated by the Data lead from EH&S guidance); RCRA codes from the EPA enrichment layer get attached as supplementary citation when available. Without that rules file, "don't mix these" would be a guess.
 2. **Shared-prep validity.** When the engine proposes "prep this reagent once for both tasks," it must check shelf life, storage requirement (flammable cabinet, -20°C, etc.), and reactivity against nearby reagents. EPA hazard flags provide these constraints.
 3. **Impact prioritization.** Saving 50 mL of water is worth ~0. Saving 50 mL of phenol-chloroform is high-value because disposal cost and footprint scale with hazard class. Recommendations rank by hazard-weighted savings so the top recommendation is always the highest-impact one.
 4. **Citation for demo credibility.** Every hazard call points to an EPA source. "Don't mix these" is a lookup, not an opinion.
@@ -357,7 +359,9 @@ Build a map: `reagent_name → [(task_id, volume_needed, time_window)]`. Reagent
 For each equipment type, get capacity. If two tasks use the same equipment with compatible settings and overlapping time windows, they can merge into one run. Compatibility is a simple equality check on equipment-relevant protocol fields (e.g. for PCR: `annealing_temp`, `extension_time`, `cycles`). If settings match and combined sample count fits in one block — batch. If settings mismatch — flag the underfilled run as a waste hotspot, no merge.
 
 ### Waste stream compatibility
-For each task, derive its waste streams from its reagents via RCRA code lookup. Pairwise-check task waste streams against a compatibility matrix (hand-built from EPA rules: halogenated never with aqueous, oxidizers never with organics, etc.). If two tasks would share a waste container — check the matrix. Emit separation warnings when required.
+For each task, derive its waste streams from its reagents by reading the `epa_lookup_key` column of `reagent_term_map.csv` — that column doubles as the waste-group identifier. Pairwise-check task waste streams against the compatibility matrix in `waste_rules_map.csv` (`waste_group_a, waste_group_b, compatible, reason, severity`). When two tasks would share a waste container, look up the pair: if `compatible=no`, emit a separation warning at the matching severity (`critical` / `warning` / `info`); if `compatible=check`, prompt the user to verify against the vendor SDS. Attach the relevant RCRA code from `data/epa_cache.json` as supplementary citation when one exists.
+
+> **Trust note:** the engine's separation warnings are only as trustworthy as `waste_rules_map.csv`. Verify that file end-to-end before the demo (see the EPA enrichment section above).
 
 ### Scheduling
 Interval scheduling with constraints. Each person has tasks (protocols, with duration derived from `sample_count × per_sample_duration`), an availability window (from `operators.csv` or the uploaded busy ICS), and protocol-dependency rules (extraction must finish before PCR using that DNA; PCR must finish before cleanup of that product). Greedy algorithm:
@@ -426,6 +430,7 @@ Owns the substance of the seeded protocols and the reagent-hazard data. This is 
 - Day 1 hours 0–6: Add the three missing sheets — `protocol_reagents.csv` (with volumes + sample counts), `protocol_thermal_profiles.csv` (PCR only), and `reagent_stability.csv` (shelf life per overlap group). Without these the engine cannot compute actual savings or propose shared-prep quantities.
 - Day 1 hours 6–12: EPA enrichment. Script (with Cursor) lookups for each unique `epa_lookup_key` against TRI and CompTox. Cache results in `/data/epa_cache.json`. Document every assumption in `/docs/data_sources.md` for the reagents that aren't individually tracked by EPA.
 - Day 1 hours 12–16: Populate `waste_rules_map.csv` with the actual cross-stream compatibility matrix. Work with Person A to make sure the engine reads it correctly.
+- **Day 2 final pre-demo verification (highest priority):** walk every row of `waste_rules_map.csv` and double-check it against EH&S guidance / vendor SDSs. The engine's separation warnings — the "don't mix these or you generate toxic gas" cards in the UI — derive *entirely* from this file. A wrong `compatible=yes` row is the kind of mistake that loses the demo's credibility instantly. Cross-check the `critical` rows in particular against the actual chemistry (e.g., guanidine + bleach really does release HCN/cyanogen chloride; alcohol + KMnO₄ really does ignite).
 - Day 2 hours 0–6: Impact coefficients. For each `generic_overlap_group` and for common plastics, pick a defensible footprint estimate (volume, waste category, rough CO₂e range). Use My Green Lab / published lab carbon-accounting papers. Write into `/data/impact_coefficients.json` with citations.
 - Day 2 hours 6–end: Demo script. Write the 90-second pitch. Be the voice on the demo. "I ran this DNeasy extraction six times last week alongside three PCRs and a cleanup; this would have collapsed the ethanol prep and the magnetic plate runs."
 

@@ -1,0 +1,50 @@
+{
+  "_meta": {
+    "description": "RCRA hazardous waste codes (F-list, P-list, U-list) from 40 CFR § 261 Subpart D.",
+    "source": "https://www.ecfr.gov/current/title-40/chapter-I/subchapter-I/part-261/subpart-D",
+    "lookup_strategy": "Match by CAS number first, fall back to lowercase chemical name match.",
+    "scope_note": "Starter set covering common molecular-biology reagents. Extend as the reagent_term_map grows.",
+    "last_reviewed": "2026-04-18"
+  },
+  "by_cas": {
+    "108-95-2":   { "codes": ["U188"], "name": "Phenol",                              "list": "U" },
+    "67-66-3":    { "codes": ["U044"], "name": "Chloroform",                          "list": "U" },
+    "67-56-1":    { "codes": ["U154"], "name": "Methanol",                            "list": "U" },
+    "67-64-1":    { "codes": ["U002"], "name": "Acetone",                             "list": "U" },
+    "75-09-2":    { "codes": ["U080"], "name": "Methylene chloride (dichloromethane)", "list": "U" },
+    "71-43-2":    { "codes": ["U019"], "name": "Benzene",                             "list": "U" },
+    "108-88-3":   { "codes": ["U220"], "name": "Toluene",                             "list": "U" },
+    "1336-21-6":  { "codes": ["F003"], "name": "Ammonium hydroxide (ignitable mixture only)", "list": "F" },
+    "75-05-8":    { "codes": ["U003"], "name": "Acetonitrile",                        "list": "U" },
+    "60-29-7":    { "codes": ["U117"], "name": "Diethyl ether",                       "list": "U" },
+    "1239-45-8":  { "codes": ["U119"], "name": "Ethidium bromide",                    "list": "U", "_note": "Ethidium bromide itself is not formally on the U-list; many institutions treat it as a state-regulated hazardous waste. Verify with your local EH&S before relying on this code." },
+    "79-01-6":    { "codes": ["U228"], "name": "Trichloroethylene",                   "list": "U" },
+    "78-93-3":    { "codes": ["U159"], "name": "Methyl ethyl ketone",                 "list": "U" },
+    "108-10-1":   { "codes": ["U161"], "name": "Methyl isobutyl ketone",             "list": "U" },
+    "75-15-0":    { "codes": ["P022"], "name": "Carbon disulfide",                    "list": "P" },
+    "151-50-8":   { "codes": ["P098"], "name": "Potassium cyanide",                   "list": "P" },
+    "143-33-9":   { "codes": ["P106"], "name": "Sodium cyanide",                      "list": "P" }
+  },
+  "by_name": {
+    "phenol": "108-95-2",
+    "chloroform": "67-66-3",
+    "methanol": "67-56-1",
+    "acetone": "67-64-1",
+    "dichloromethane": "75-09-2",
+    "methylene chloride": "75-09-2",
+    "benzene": "71-43-2",
+    "toluene": "108-88-3",
+    "acetonitrile": "75-05-8",
+    "diethyl ether": "60-29-7",
+    "ethidium bromide": "1239-45-8",
+    "ethbr": "1239-45-8"
+  },
+  "spent_solvent_lists": {
+    "_note": "F001–F005 cover spent solvents and are assigned at the waste-generation step, not the reagent itself. The engine should apply these dynamically when classifying the waste stream of a protocol's outputs, not when looking up a single reagent.",
+    "F001": "Spent halogenated solvents used in degreasing (TCE, perchloroethylene, methylene chloride, 1,1,1-trichloroethane, carbon tetrachloride, chlorinated fluorocarbons).",
+    "F002": "Spent halogenated solvents (TCE, methylene chloride, perchloroethylene, 1,1,1-trichloroethane, chlorobenzene, 1,1,2-trichloro-1,2,2-trifluoroethane, ortho-dichlorobenzene, trichlorofluoromethane, 1,1,2-trichloroethane).",
+    "F003": "Spent non-halogenated solvents (xylene, acetone, ethyl acetate, ethyl benzene, ethyl ether, methyl isobutyl ketone, n-butyl alcohol, cyclohexanone, methanol).",
+    "F004": "Spent non-halogenated solvents (cresols, cresylic acid, nitrobenzene).",
+    "F005": "Spent non-halogenated solvents (toluene, methyl ethyl ketone, carbon disulfide, isobutanol, pyridine, benzene, 2-ethoxyethanol, 2-nitropropane)."
+  }
+}
