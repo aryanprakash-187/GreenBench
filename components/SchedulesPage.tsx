@@ -25,7 +25,11 @@ type PersonSchedule = {
   events: ScheduleEvent[];
 };
 
-export default function SchedulesPage() {
+type SchedulesPageProps = {
+  onBack?: () => void;
+};
+
+export default function SchedulesPage({ onBack }: SchedulesPageProps = {}) {
   const [data, setData] = useState<Submission | null>(null);
 
   useEffect(() => {
@@ -46,7 +50,7 @@ export default function SchedulesPage() {
 
   return (
     <div className="min-h-screen bg-white text-forest-900">
-      <TopBar />
+      <TopBar onBack={onBack} />
 
       {/* Centered title hero */}
       <section className="border-b border-forest-700/10 bg-white">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   loadSubmission,
   namesList,
@@ -9,9 +10,17 @@ import {
   type FileStub,
 } from "@/lib/submission";
 
-export default function OverviewPage() {
+type OverviewPageProps = {
+  onBack?: () => void;
+  onNext?: () => void;
+};
+
+export default function OverviewPage({ onBack, onNext }: OverviewPageProps = {}) {
+  const router = useRouter();
   const [data, setData] = useState<Submission | null>(null);
   const [annualized, setAnnualized] = useState(false);
+
+  const handleNext = onNext ?? (() => router.push("/schedules"));
 
   useEffect(() => {
     setData(loadSubmission());
@@ -38,7 +47,7 @@ export default function OverviewPage() {
 
   return (
     <div className="min-h-screen bg-sand-50 text-forest-900">
-      <TopBar />
+      <TopBar onBack={onBack} />
 
       {/* Centered title hero */}
       <section className="border-b border-forest-700/10 bg-white/50">
@@ -193,9 +202,7 @@ export default function OverviewPage() {
           </p>
           <button
             type="button"
-            onClick={() =>
-              window.open("/schedules", "_blank", "noopener,noreferrer")
-            }
+            onClick={handleNext}
             className="group inline-flex items-center gap-3 rounded-full bg-forest-700 px-10 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-sand-50 shadow-soft transition hover:bg-forest-800 active:translate-y-px"
           >
             <span>Next</span>
@@ -213,7 +220,7 @@ export default function OverviewPage() {
             </svg>
           </button>
           <p className="text-xs text-forest-800/60">
-            Opens Finalized Schedules in a new tab.
+            Continue to Finalized Schedules.
           </p>
         </div>
       </main>
@@ -617,27 +624,50 @@ function WarningCard({
 
 /* ---------- Top bar + footer ---------- */
 
-export function TopBar() {
+export function TopBar({ onBack }: { onBack?: () => void } = {}) {
   return (
     <header className="border-b border-forest-700/10 bg-sand-50/90 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-        <Link
-          href="/"
-          className="group flex items-center gap-3"
-          aria-label="Green Bench home"
-        >
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-forest-700 text-sand-50">
-            <LeafIcon />
-          </span>
-          <div className="leading-tight">
-            <p className="font-brand text-xl font-semibold tracking-tight text-forest-800">
-              Green Bench
-            </p>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-forest-800/55">
-              schedule for sustainability
-            </p>
-          </div>
-        </Link>
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              aria-label="Back"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-forest-700/20 text-forest-800 transition hover:bg-forest-700 hover:text-sand-50"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M19 12H5" />
+                <path d="M12 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
+          <Link
+            href="/"
+            className="group flex items-center gap-3"
+            aria-label="Green Bench home"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-forest-700 text-sand-50">
+              <LeafIcon />
+            </span>
+            <div className="leading-tight">
+              <p className="font-brand text-xl font-semibold tracking-tight text-forest-800">
+                Green Bench
+              </p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-forest-800/55">
+                schedule for sustainability
+              </p>
+            </div>
+          </Link>
+        </div>
         <Link
           href="/"
           className="rounded-full border border-forest-700/20 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-forest-800 transition hover:bg-forest-700 hover:text-sand-50"
@@ -654,7 +684,7 @@ export function Footer() {
     <footer className="border-t border-forest-700/10 bg-white/50 py-10">
       <div className="mx-auto max-w-5xl space-y-6 px-6">
         <section>
-          <p className="text-center text-[10px] uppercase tracking-[0.3em] text-forest-800/55">
+          <p className="text-center text-xl font-semibold uppercase tracking-[0.2em] text-forest-700">
             Verify our data
           </p>
           <p className="mx-auto mt-2 max-w-2xl text-center text-xs text-forest-800/60">

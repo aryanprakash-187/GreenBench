@@ -3,29 +3,32 @@
 import { useRef, useState } from "react";
 import { Footer } from "@/components/OverviewPage";
 
-type Person = {
+export type Person = {
   name: string;
   protocol: File | null;
   schedule: File | null;
   sampleCount: string;
 };
 
-const EMPTY_PERSON: Person = {
+export const EMPTY_PERSON: Person = {
   name: "",
   protocol: null,
   schedule: null,
   sampleCount: "",
 };
 
-export default function HomeForm() {
-  const [people, setPeople] = useState<Person[]>([
-    { ...EMPTY_PERSON },
-    { ...EMPTY_PERSON },
-    { ...EMPTY_PERSON },
-  ]);
+type HomeFormProps = {
+  people: Person[];
+  setPeople: React.Dispatch<React.SetStateAction<Person[]>>;
+  onSubmitted?: () => void;
+};
+
+export default function HomeForm({
+  people,
+  setPeople,
+  onSubmitted,
+}: HomeFormProps) {
   const [submitting, setSubmitting] = useState(false);
-  const [launched, setLaunched] = useState(false);
-  const [popupBlocked, setPopupBlocked] = useState(false);
 
   function updatePerson(index: number, patch: Partial<Person>) {
     setPeople((prev) => {
@@ -55,41 +58,15 @@ export default function HomeForm() {
     };
 
     try {
-      // localStorage (not sessionStorage) so new tabs can read the data.
       localStorage.setItem("greenbench.submission", JSON.stringify(payload));
     } catch {
       // ignore storage errors
     }
 
-    // Submit / Resubmit only opens the Overview tab (Step 2). The Finalized
-    // Schedules tab (Step 3) is opened from the Next button on the Overview
-    // page, not here. This keeps the flow linear: Step 1 → Step 2 → Step 3.
-    const overview = window.open("/overview", "_blank", "noopener,noreferrer");
-    try {
-      overview?.focus();
-    } catch {
-      // ignore: browser may refuse focus
-    }
-
-    if (!overview) {
-      setPopupBlocked(true);
-    }
-
-    setLaunched(true);
     setSubmitting(false);
+    onSubmitted?.();
   }
 
-  function reopenTabs() {
-    const overview = window.open("/overview", "_blank", "noopener,noreferrer");
-    try {
-      overview?.focus();
-    } catch {
-      // ignore
-    }
-    if (overview) setPopupBlocked(false);
-  }
-
-  // Require every person to have all four fields filled out.
   const filledCount = people.filter(
     (p) =>
       p.name.trim() &&
@@ -151,7 +128,7 @@ export default function HomeForm() {
               disabled={!canSubmit}
               className="group inline-flex items-center gap-3 rounded-full bg-forest-700 px-10 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-sand-50 shadow-soft transition enabled:hover:bg-forest-800 enabled:active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <span>{launched ? "Resubmit" : "Submit"}</span>
+              <span>Submit</span>
               <svg
                 className="h-4 w-4 transition group-enabled:group-hover:translate-x-1"
                 viewBox="0 0 24 24"
@@ -172,47 +149,6 @@ export default function HomeForm() {
             </p>
           </div>
 
-          {/* Launched confirmation */}
-          {launched && (
-            <div className="mt-6 rounded-2xl border border-moss-500/30 bg-moss-50/80 p-5 text-center">
-              {popupBlocked ? (
-                <>
-                  <p className="text-sm font-semibold text-forest-800">
-                    Your browser blocked the Overview tab.
-                  </p>
-                  <p className="mt-1 text-xs text-forest-800/70">
-                    Allow pop-ups for this site, or click below to open it
-                    manually.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={reopenTabs}
-                    className="mt-3 inline-flex items-center gap-2 rounded-full bg-forest-700 px-5 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-sand-50 transition hover:bg-forest-800"
-                  >
-                    Open Overview
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm font-semibold text-forest-800">
-                    Overview opened in a new tab. Use the Next button there to
-                    continue to Finalized Schedules.
-                  </p>
-                  <p className="mt-1 text-xs text-forest-800/70">
-                    Didn&rsquo;t see it? Check that your browser allows pop-ups
-                    from this site.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={reopenTabs}
-                    className="mt-3 inline-flex items-center gap-2 rounded-full border border-forest-700/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-forest-800 transition hover:bg-forest-700 hover:text-sand-50"
-                  >
-                    Reopen Overview
-                  </button>
-                </>
-              )}
-            </div>
-          )}
         </form>
 
         <p className="mt-8 text-center text-xs text-forest-800/50">
