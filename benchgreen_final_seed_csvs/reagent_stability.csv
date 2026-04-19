@@ -1,0 +1,7 @@
+generic_overlap_group,stable_hours_after_prep,storage_requirement,notes
+low_salt_elution_buffer,168,room_temp,Simple low-salt aqueous elution buffers are treated as long-stability for hackathon modeling.
+primer,168,freezer_-20c,Primer stocks are stable long-term frozen; use as conservative scheduling proxy for same-week shared setup.
+PCR_water,168,room_temp,PCR-grade or nuclease-free water treated as long-stability simple aqueous reagent.
+ethanol_wash,168,room_temp,Fresh 70 percent ethanol modeled as stable for one week at room temperature; aligns with three-bucket guidance.
+elution_water,168,room_temp,Reagent-grade water used as elution solvent; long-stability.
+elution_buffer,168,fridge_4c,TE / Tris elution buffer treated as stable at 4C; conservative but permissive for same-week shared prep.

@@ -1,0 +1,17 @@
+raw_term,normalized_name,consumable_group,plastic_burden_level,core_MVP_yes_no,notes
+2 mL collection tube,collection_tube_2mL,tube,medium,yes,common in extraction workflows
+microcentrifuge tube,microcentrifuge_tube,tube,medium,yes,common across families
+1.5 mL microcentrifuge tube,microcentrifuge_tube_1_5mL,tube,medium,yes,common elution/storage tube
+DNeasy Mini Spin Column,spin_column,spin_column,high,yes,extraction-specific plastic hotspot
+GeneJET Genomic DNA Purification Column,spin_column,spin_column,high,yes,normalize with DNeasy spin column
+PCR tube,PCR_tube,reaction_tube,medium,yes,endpoint PCR workflows
+0.2 mL PCR tube,PCR_tube,reaction_tube,medium,yes,PCR setup
+0.5 mL PCR tube,PCR_tube,reaction_tube,medium,yes,PCR setup
+96-well reaction plate,plate_96well,plate,high,yes,cleanup and high-throughput workflows
+deep well plate,deep_well_plate,plate,high,yes,MagJET and plate-based workflows
+plate seals,plate_seal,seal,low,yes,cleanup workflows
+foil tape,foil_tape,seal,low,yes,plate-based extraction workflows
+pipette tips,pipette_tips,tips,high,yes,major plastic hotspot across all families
+filtered pipette tips,filtered_pipette_tips,tips,high,yes,common in PCR/cleanup
+12-tip comb,tip_comb,automation_consumable,medium,no,automation stretch only
+elution strip,elution_strip,automation_consumable,medium,no,KingFisher stretch only

@@ -1,0 +1,4 @@
+protocol_name,initial_denature_temp_c,initial_denature_time_s,cycle_denature_temp_c,cycle_denature_time_s,annealing_temp_c,annealing_time_s,extension_temp_c,extension_time_s,cycles,final_extension_temp_c,final_extension_time_s,notes
+Q5 Hot Start High-Fidelity 2X Master Mix,98,30,98,10,60,20,72,30,30,72,120,"Vendor guide gives annealing as calculator-dependent (50-72C) and extension 20-30 s/kb; modeled common routine sub-1 kb run with 60C/20 s anneal, 30 s extension, 30 cycles."
+Platinum II Hot-Start PCR Master Mix (2X),94,120,94,15,60,15,72,30,30,72,300,"Modeled from vendor defaults: annealing 60C for most primer pairs, polymerase extends 1 kb in 15 s, hot-start restored after 94C initial denaturation. Final extension modeled at 5 min."
+JumpStart REDTaq ReadyMix,94,120,94,30,60,30,72,120,30,72,300,"Vendor protocol gives annealing 55-68C and 30-35 cycles; modeled common mid-range 60C, 30 cycles, 2 min extension for 0.2-2 kb fragments."

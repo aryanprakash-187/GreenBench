@@ -1,0 +1,15 @@
+waste_group_a,waste_group_b,compatible,reason,severity
+chaotropic_salt_liquid_waste,bleach_aqueous,no,Chaotropic salts / guanidine-containing streams must not be mixed with bleach because toxic gas may form.,critical
+chaotropic_salt_liquid_waste,alcohol_liquid_waste,yes,Compatible only with segregation preferred; keep chaotropic and solvent streams separated in practice for safer handling.,warning
+alcohol_liquid_waste,strong_oxidizer_waste,no,Alcohol waste with oxidizers creates fire / reactivity risk.,critical
+PCR_dye_mix_waste,aqueous_buffer,no,PCR dye-containing waste should not contaminate general non-hazardous aqueous streams.,warning
+PCR_dye_mix_waste,enzyme_aqueous_waste,no,PCR dye-containing waste should stay segregated from ordinary low-hazard enzyme/aqueous waste.,warning
+solid_liquid_bead_waste,alcohol_liquid_waste,yes,Bead cleanup workflows often co-occur with alcohol wash steps; compatible with note and standard magnetic cleanup handling.,info
+enzyme_aqueous_waste,aqueous_buffer,yes,Low-volume enzyme solutions and non-hazardous aqueous buffers are generally compatible as non-reactive aqueous lab waste.,info
+chemical_buffer_waste,aqueous_buffer,check,Vendor SDS should be checked before combining general chemical buffer waste with simple aqueous buffer waste.,warning
+isopropanol_liquid_waste,alcohol_liquid_waste,yes,Both are ignitable alcohol-solvent streams and can be handled as segregated solvent waste.,info
+ethanol_liquid_waste,alcohol_liquid_waste,yes,Equivalent ignitable alcohol streams.,info
+ethanol_buffer_waste,alcohol_liquid_waste,yes,Ethanol-containing wash buffer is compatible with segregated alcohol solvent waste.,info
+chemical_wash_waste,aqueous_buffer,check,Wash buffers may contain salts or solvent residues; review SDS before combining with low-hazard aqueous waste.,warning
+oil_waste,aqueous_buffer,no,Hydrocarbon oils should not be discarded into aqueous waste streams.,warning
+DMSO_liquid_waste,aqueous_buffer,check,DMSO-containing additive waste should be handled conservatively as chemical liquid waste.,warning

@@ -1,0 +1,16 @@
+raw_term,normalized_name,equipment_group,batchable_yes_no,core_MVP_yes_no,notes
+microcentrifuge,microcentrifuge,centrifuge,yes,yes,core for spin-column DNA extraction
+centrifuge,centrifuge,centrifuge,yes,yes,core for extraction workflows
+thermocycler,thermocycler,PCR_machine,yes,yes,core for PCR workflows
+PCR machine,thermocycler,PCR_machine,yes,yes,synonym for thermocycler
+magnetic rack,magnetic_rack,magnetic_separator,yes,yes,core for magnetic extraction and cleanup
+magnetic plate,magnetic_plate,magnetic_separator,yes,yes,plate-based magnetic cleanup
+Agencourt SPRIPlate Magnetic Plate,magnetic_plate,magnetic_separator,yes,yes,cleanup-specific magnetic plate
+vortex,vortex,mixing_device,no,yes,support equipment
+heat block,heat_block,incubation_device,no,yes,support equipment
+water bath,water_bath,incubation_device,no,yes,support equipment
+thermomixer,thermomixer,incubation_mixing_device,no,stretch,useful in MagJET genomic workflows
+multichannel pipette,multichannel_pipette,pipetting_device,yes,yes,relevant for plate workflows
+KingFisher Flex,KingFisher_Flex,automation_platform,yes,no,automation stretch feature
+KingFisher Duo,KingFisher_Duo,automation_platform,yes,no,automation stretch feature
+QIAcube,QIAcube,automation_platform,yes,no,not needed for MVP

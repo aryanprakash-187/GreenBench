@@ -1,0 +1,7 @@
+generic_overlap_group,can_batch_prep,prep_overhead_ml,max_batch_ml,notes
+low_salt_elution_buffer,yes,2.0,200,Low-salt elution buffers can be pre-aliquoted for same-day or same-week use.
+primer,yes,0.2,5,Batching is allowed only for identical primer sets; engine or UI should require user confirmation if target sets differ.
+PCR_water,yes,5.0,500,PCR-grade water can be staged once across compatible PCR tasks.
+ethanol_wash,yes,5.0,500,"Fresh wash ethanol is a strong shared-prep candidate; handoff warns that >500 mL in one prep is weird, so cap at 500 mL."
+elution_water,yes,2.0,250,Elution-grade water can be batched across cleanup workflows.
+elution_buffer,yes,2.0,250,Buffered elution solutions can be batched if downstream application tolerates the same formulation.
