@@ -11,10 +11,20 @@
 //      LOCATION pulled from the equipment reservation and a DESCRIPTION
 //      that lists the prose recommendation, separations, and citations
 //      relevant to that task.
-//   3. One VEVENT per shared coordination event that this person
-//      participates in (shared reagent prep / shared equipment run). Shared
-//      events are placed 30 min before the earliest participating task and
-//      annotated as "Green Bench · Shared ...".
+//   3. One VEVENT per shared *reagent prep* coordination this person
+//      participates in. Multiple preps anchored to the same task are
+//      staggered (prep[0] ends 30 min before the task, each earlier prep
+//      nests another DURATION+GAP minutes back) so a single human can
+//      realistically execute them sequentially.
+//
+// We intentionally do NOT emit a VEVENT for shared_equipment_run
+// coordinations: by construction every participant of an equipment-share
+// already owns a task event at that time, with the equipment listed in
+// LOCATION and the partner in "Shared with:". Re-emitting a same-time
+// "Shared X run" block on top of the task event creates pure visual
+// noise with no extra information. We also defensively skip any
+// coordination whose savings are all zero — those are advisory cards in
+// the overview, not real calendar events.
 //
 // We deliberately don't try to be a full RFC 5545 implementation — we
 // emit the minimum every major calendar app (Google, Apple, Outlook)
@@ -29,8 +39,9 @@ import type {
 } from '@/lib/engine/types';
 
 const GREENBENCH_PRODID = '-//Green Bench//Schedule for Sustainability//EN';
-const SHARED_PREP_LEAD_MIN = 30; // shared prep block sits this many min before the earliest user
+const SHARED_PREP_LEAD_MIN = 30; // first prep block ends this many min before the earliest user task
 const SHARED_PREP_DEFAULT_DURATION_MIN = 20;
+const SHARED_PREP_STAGGER_GAP_MIN = 5; // breathing room between back-to-back staggered preps
 
 export interface BuildPersonIcsOptions {
   /** Display name; matches ScheduledTask.person and Coordination.participants[].person. */
@@ -55,7 +66,16 @@ export function buildPersonIcs(opts: BuildPersonIcsOptions): string {
   lines.push('CALSCALE:GREGORIAN');
   lines.push('METHOD:PUBLISH');
   lines.push(`X-WR-CALNAME:Green Bench · ${escapeText(opts.personName)}`);
-  lines.push('X-WR-TIMEZONE:UTC');
+  // We deliberately do NOT emit X-WR-TIMEZONE. This non-standard header is
+  // honored by Google Calendar (and partially by Apple) as "interpret every
+  // naive DTSTART/DTEND in this calendar as being in this zone". The user's
+  // pass-through events are typically RFC 5545 floating times (no Z, no
+  // TZID) — they're meant to render at that wall-clock value in whatever
+  // timezone the viewer is sitting in. Declaring X-WR-TIMEZONE:UTC made
+  // Google reinterpret a 10:00:00 floating event as 10:00 UTC and shift it
+  // by the viewer's offset (e.g. 3am in GMT-7), which is wrong. Engine-
+  // emitted Green Bench events use explicit `Z` UTC times so they convert
+  // correctly with or without the header.
 
   // 1. Pass-through of the user's original VEVENT blocks. We grab them
   //    verbatim from the upload so any TZ definitions, RRULEs, etc. survive.
@@ -70,21 +90,52 @@ export function buildPersonIcs(opts: BuildPersonIcsOptions): string {
     lines.push(...buildTaskVevent({ task, plan: opts.plan, stamp }));
   }
 
-  // 3. Shared coordination events that this person participates in.
-  //    We emit one per coordination so the calendar shows a separate
-  //    "Shared ..." block (otherwise the LOCATION+DESCRIPTION on the task
-  //    event is the only signal a user gets, which is easy to miss).
-  const participatingCoords = opts.plan.coordinations.filter((c) =>
-    c.participants.some((p) => p.person === opts.personName)
-  );
-  for (const coord of participatingCoords) {
-    const sharedBlock = buildSharedCoordinationVevent({
-      coord,
-      plan: opts.plan,
-      personName: opts.personName,
-      stamp,
-    });
-    if (sharedBlock) lines.push(...sharedBlock);
+  // 3. Shared *reagent prep* coordinations this person participates in.
+  //    See file header for why shared_equipment_run is intentionally
+  //    excluded. We also drop coordinations with no real net savings
+  //    (e.g. equipment shares clamped to runs_saved=0 by capacity math
+  //    upstream) — those exist in the engine output as advisory cards
+  //    but have no business as calendar blocks.
+  //
+  //    For the surviving reagent preps we group by their anchor task's
+  //    earliest start so we can stagger sibling preps back-to-back. A
+  //    single human cannot prep three reagents simultaneously, and the
+  //    previous behaviour stacked them all in the same 20-min slot.
+  type PrepEntry = { coord: NarratedCoordination; earliestStart: number };
+  const prepBuckets = new Map<number, PrepEntry[]>();
+  for (const coord of opts.plan.coordinations) {
+    if (!coord.participants.some((p) => p.person === opts.personName)) continue;
+    if (coord.type !== 'shared_reagent_prep') continue;
+    if (!coordinationHasNonzeroSavings(coord)) continue;
+    const earliestStart = earliestParticipantStartMs(coord, opts.plan);
+    if (earliestStart === null) continue;
+    const list = prepBuckets.get(earliestStart) ?? [];
+    list.push({ coord, earliestStart });
+    prepBuckets.set(earliestStart, list);
+  }
+
+  for (const entries of prepBuckets.values()) {
+    // Stable order so the same plan produces the same staggered layout
+    // every time (deterministic ICS for tests + diff-friendly exports).
+    entries.sort((a, b) => a.coord.id.localeCompare(b.coord.id));
+    for (let i = 0; i < entries.length; i++) {
+      const { coord, earliestStart } = entries[i];
+      const startOffsetMin =
+        SHARED_PREP_LEAD_MIN +
+        SHARED_PREP_DEFAULT_DURATION_MIN +
+        i * (SHARED_PREP_DEFAULT_DURATION_MIN + SHARED_PREP_STAGGER_GAP_MIN);
+      const start = new Date(earliestStart - startOffsetMin * 60 * 1000);
+      const end = new Date(start.getTime() + SHARED_PREP_DEFAULT_DURATION_MIN * 60 * 1000);
+      lines.push(
+        ...buildSharedReagentPrepVevent({
+          coord,
+          start,
+          end,
+          personName: opts.personName,
+          stamp,
+        })
+      );
+    }
   }
 
   lines.push('END:VCALENDAR');
@@ -166,8 +217,8 @@ function buildTaskVevent(args: {
   out.push('BEGIN:VEVENT');
   out.push(`UID:${task.task_id}@greenbench.local`);
   out.push(`DTSTAMP:${stamp}`);
-  out.push(`DTSTART:${formatIcsUtcFromIso(task.start_iso)}`);
-  out.push(`DTEND:${formatIcsUtcFromIso(task.end_iso)}`);
+  out.push(`DTSTART:${formatIcsFloatingFromIso(task.start_iso)}`);
+  out.push(`DTEND:${formatIcsFloatingFromIso(task.end_iso)}`);
   out.push(`SUMMARY:Green Bench · ${escapeText(task.protocol_name)}`);
   out.push(`LOCATION:${escapeText(location)}`);
   out.push(`DESCRIPTION:${escapeText(description)}`);
@@ -178,60 +229,19 @@ function buildTaskVevent(args: {
   return out;
 }
 
-// ----- Shared coordination VEVENT -----
+// ----- Shared reagent prep VEVENT -----
 
-function buildSharedCoordinationVevent(args: {
+function buildSharedReagentPrepVevent(args: {
   coord: NarratedCoordination;
-  plan: NarratedWeekPlanResult;
+  start: Date;
+  end: Date;
   personName: string;
   stamp: string;
-}): string[] | null {
-  const { coord, plan, personName, stamp } = args;
+}): string[] {
+  const { coord, start, end, personName, stamp } = args;
 
-  // Find the earliest scheduled participant for this coordination — the
-  // shared prep block needs to be done before the first user touches the
-  // shared output. (For shared_equipment_run we anchor on the shared start.)
-  const partTasks = coord.participants
-    .map((p) => plan.schedule.find((s) => s.task_id === p.task_id))
-    .filter((s): s is ScheduledTask => !!s);
-
-  if (partTasks.length === 0) return null;
-
-  const earliestStart = partTasks.reduce((min, s) => {
-    const t = new Date(s.start_iso).getTime();
-    return t < min ? t : min;
-  }, Number.POSITIVE_INFINITY);
-  if (!Number.isFinite(earliestStart)) return null;
-
-  let start: Date;
-  let end: Date;
-  let summary: string;
-  let location: string;
-
-  if (coord.type === 'shared_reagent_prep') {
-    // Place the shared prep block 50 min before the earliest participant's
-    // task: SHARED_PREP_LEAD_MIN of breathing room + SHARED_PREP_DEFAULT_DURATION_MIN
-    // for the actual prep itself. This keeps the prep visually distinct from
-    // back-to-back tasks and finishes 30 min before any participant starts.
-    start = new Date(
-      earliestStart -
-        (SHARED_PREP_LEAD_MIN + SHARED_PREP_DEFAULT_DURATION_MIN) * 60 * 1000
-    );
-    end = new Date(start.getTime() + SHARED_PREP_DEFAULT_DURATION_MIN * 60 * 1000);
-    summary = `Green Bench · Shared prep · ${humanize(coord.overlap_group ?? 'reagent')}`;
-    location = 'Green Bench prep bench';
-  } else {
-    // Shared equipment run: anchor on the earliest task — they're meant to
-    // run simultaneously. We mirror the duration of the earliest task.
-    const earliest = partTasks.find(
-      (s) => new Date(s.start_iso).getTime() === earliestStart
-    )!;
-    start = new Date(earliest.start_iso);
-    end = new Date(earliest.end_iso);
-    const eqLabel = humanize(coord.equipment_group ?? 'equipment');
-    summary = `Green Bench · Shared ${eqLabel} run`;
-    location = `Green Bench bench · ${eqLabel}`;
-  }
+  const summary = `Green Bench · Shared prep · ${humanize(coord.overlap_group ?? 'reagent')}`;
+  const location = 'Green Bench prep bench';
 
   const otherPeople = uniq(
     coord.participants.map((p) => p.person).filter((n) => n !== personName)
@@ -266,8 +276,8 @@ function buildSharedCoordinationVevent(args: {
   out.push('BEGIN:VEVENT');
   out.push(`UID:${coord.id}__${slug(personName)}@greenbench.local`);
   out.push(`DTSTAMP:${stamp}`);
-  out.push(`DTSTART:${formatIcsUtc(start)}`);
-  out.push(`DTEND:${formatIcsUtc(end)}`);
+  out.push(`DTSTART:${formatIcsFloating(start)}`);
+  out.push(`DTEND:${formatIcsFloating(end)}`);
   out.push(`SUMMARY:${escapeText(summary + peopleSuffix)}`);
   out.push(`LOCATION:${escapeText(location)}`);
   out.push(`DESCRIPTION:${escapeText(description)}`);
@@ -276,6 +286,39 @@ function buildSharedCoordinationVevent(args: {
   out.push('TRANSP:OPAQUE');
   out.push('END:VEVENT');
   return out;
+}
+
+// ----- Coordination filtering helpers -----
+
+/** Earliest scheduled-task start (in ms) across this coordination's participants,
+ *  or null if none of the participant tasks are actually in the schedule. */
+function earliestParticipantStartMs(
+  coord: NarratedCoordination,
+  plan: NarratedWeekPlanResult
+): number | null {
+  const partTasks = coord.participants
+    .map((p) => plan.schedule.find((s) => s.task_id === p.task_id))
+    .filter((s): s is ScheduledTask => !!s);
+  if (partTasks.length === 0) return null;
+  const earliest = partTasks.reduce((min, s) => {
+    const t = new Date(s.start_iso).getTime();
+    return t < min ? t : min;
+  }, Number.POSITIVE_INFINITY);
+  return Number.isFinite(earliest) ? earliest : null;
+}
+
+/** True iff the coordination claims any concrete saving. The matcher can
+ *  emit zero-savings shared_equipment_run entries when combined samples
+ *  blow past instrument capacity (e.g. 900 samples on a 96-well magnet);
+ *  those are useful as overview advisories but have no place on a calendar. */
+function coordinationHasNonzeroSavings(coord: NarratedCoordination): boolean {
+  const s = coord.savings;
+  if ((s.runs_saved ?? 0) > 0) return true;
+  if ((s.prep_events_saved ?? 0) > 0) return true;
+  if ((s.volume_ml ?? 0) > 0) return true;
+  if ((s.hazardous_disposal_events_avoided ?? 0) > 0) return true;
+  if (s.co2e_kg_range && (s.co2e_kg_range[0] > 0 || s.co2e_kg_range[1] > 0)) return true;
+  return false;
 }
 
 // ----- ICS pass-through extraction -----
@@ -366,7 +409,9 @@ function foldLine(line: string): string[] {
   return out;
 }
 
-/** Format a Date as ICS UTC: 20260420T140000Z. */
+/** Format a Date as ICS UTC: 20260420T140000Z. Used for DTSTAMP only —
+ *  RFC 5545 §3.8.7.2 requires DTSTAMP to be UTC. Event start/end use the
+ *  floating-time formatter below. */
 function formatIcsUtc(d: Date): string {
   const pad = (n: number) => n.toString().padStart(2, '0');
   return (
@@ -381,8 +426,35 @@ function formatIcsUtc(d: Date): string {
   );
 }
 
-function formatIcsUtcFromIso(iso: string): string {
-  return formatIcsUtc(new Date(iso));
+/** Format a Date's UTC components as RFC 5545 floating time:
+ *  20260420T140000 (no trailing Z, no TZID parameter).
+ *
+ *  Why floating: the engine reasons about all naive input ICS times as if
+ *  they were UTC (lib/engine/ics.ts) and emits scheduled tasks as ISO UTC.
+ *  But the input ICS times are typically the user's local wall-clock times
+ *  (e.g. "Chem Lecture at 10:00" means 10am wherever Sohini lives, not
+ *  10:00 UTC). So when we hand the result back to a calendar viewer we
+ *  emit floating time too — the viewer renders the digits at face value
+ *  in its local zone. Round-trip stays consistent for a single-timezone
+ *  lab, which is the realistic deployment.
+ *
+ *  Multi-timezone collaboration would need real TZID handling end-to-end
+ *  (see TODO in lib/engine/ics.ts). */
+function formatIcsFloating(d: Date): string {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return (
+    d.getUTCFullYear().toString() +
+    pad(d.getUTCMonth() + 1) +
+    pad(d.getUTCDate()) +
+    'T' +
+    pad(d.getUTCHours()) +
+    pad(d.getUTCMinutes()) +
+    pad(d.getUTCSeconds())
+  );
+}
+
+function formatIcsFloatingFromIso(iso: string): string {
+  return formatIcsFloating(new Date(iso));
 }
 
 function humanize(s: string): string {

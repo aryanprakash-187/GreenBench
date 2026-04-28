@@ -70,8 +70,8 @@ Bad: "This is a great coordination opportunity that will help your lab."
 
 ### `coordinations[i].savings_phrase`
 
-One short sentence quantifying the savings. MUST contain at least one number
-from `coordinations[i].savings`. Pick the most user-meaningful unit:
+One short sentence quantifying the savings. MUST contain at least one digit
+character (0–9). Pick the most user-meaningful unit from `coordinations[i].savings`:
 
 - If `volume_ml > 0`, lead with that.
 - If `runs_saved > 0`, mention runs saved.
@@ -81,6 +81,16 @@ from `coordinations[i].savings`. Pick the most user-meaningful unit:
 Good: "Saves ~40 mL ethanol and 2 prep events"
 Good: "Saves 1 thermocycler run, ~0.4 kg CO₂e"
 Bad: "Saves a lot"
+
+When EVERY field in `savings` is 0 / empty (the engine emits these as advisory
+items — e.g. an equipment share where combined samples blow past instrument
+capacity, so no run is actually saved), write a phrase that still contains the
+literal digit `0` so the schema is satisfied. State the reason in plain English.
+
+Good: "Saves 0 runs — combined 900 samples exceed the 96-well capacity"
+Good: "Saves 0 quantified units — advisory only"
+Bad: "Capacity exceeded — no batchable savings" (no digit)
+Bad: "No runs saved" (no digit)
 
 When `aligned: false`, prefix with "Advisory — scheduler couldn't align —".
 

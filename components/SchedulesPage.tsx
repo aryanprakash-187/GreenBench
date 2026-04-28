@@ -12,9 +12,17 @@ import {
 } from "@/lib/submission";
 import { buildPersonIcs, suggestIcsFilename } from "@/lib/export/ics";
 import type {
+  NarratedCoordination,
   NarratedWeekPlanResult,
   ScheduledTask,
 } from "@/lib/engine/types";
+
+// Mirrors the ICS exporter — see lib/export/ics.ts for rationale. Multiple
+// shared reagent preps that anchor to the same task are nested back-to-back
+// (DURATION + GAP minutes apart) instead of stacked at one slot.
+const SHARED_PREP_LEAD_MIN = 30;
+const SHARED_PREP_DEFAULT_DURATION_MIN = 20;
+const SHARED_PREP_STAGGER_GAP_MIN = 5;
 
 type SchedulesPageProps = {
   onBack?: () => void;
@@ -441,7 +449,7 @@ function describePersonEvents(
     rows.push({
       key: `task__${t.task_id}`,
       title: t.protocol_name,
-      day: start.toLocaleDateString(undefined, { weekday: "short" }),
+      day: start.toLocaleDateString(undefined, { weekday: "short", timeZone: "UTC" }),
       start: formatLocalHm(start),
       end: formatLocalHm(end),
       durationMin: Math.max(
@@ -458,40 +466,81 @@ function describePersonEvents(
     });
   }
 
+  // Shared *reagent prep* coordinations only — see lib/export/ics.ts for
+  // why shared_equipment_run is excluded (each participant already owns a
+  // task event at that time with the equipment in its location). We also
+  // drop coordinations with no real net savings (e.g. equipment shares
+  // clamped to runs_saved=0 by capacity math). Multiple preps anchored to
+  // the same task are staggered back-to-back so a single human can
+  // realistically execute them sequentially instead of all at once.
+  type PrepEntry = { coord: NarratedCoordination; anchorMs: number };
+  const prepBuckets = new Map<number, PrepEntry[]>();
   for (const c of plan.coordinations) {
-    const part = c.participants.find((p) => p.person === personName);
-    if (!part) continue;
-    const peerTask = plan.schedule.find((s) => s.task_id === part.task_id);
-    if (!peerTask) continue;
-    const others = uniq(
-      c.participants.map((p) => p.person).filter((n) => n !== personName),
+    if (!c.participants.some((p) => p.person === personName)) continue;
+    if (c.type !== "shared_reagent_prep") continue;
+    if (!coordinationHasNonzeroSavings(c)) continue;
+    const partTask = plan.schedule.find((s) =>
+      c.participants.some((p) => p.task_id === s.task_id),
     );
-    const start = new Date(peerTask.start_iso);
-    const end = new Date(peerTask.end_iso);
-    const isPrep = c.type === "shared_reagent_prep";
-    const groupLabel = humanize(
-      isPrep ? c.overlap_group ?? "reagent" : c.equipment_group ?? "equipment",
-    );
-    rows.push({
-      key: `coord__${c.id}__${personName}`,
-      title: isPrep
-        ? `Shared prep — ${groupLabel}`
-        : `Shared run — ${groupLabel}`,
-      day: start.toLocaleDateString(undefined, { weekday: "short" }),
-      start: formatLocalHm(start),
-      end: formatLocalHm(end),
-      durationMin: Math.max(
-        0,
-        Math.round((end.getTime() - start.getTime()) / 60000),
-      ),
-      tone: isPrep ? "moss" : "ocean",
-      location: others.length > 0 ? `with ${others.join(", ")}` : "shared",
-      description: c.recommendation,
-      shared: true,
-    });
+    if (!partTask) continue;
+    const anchorMs = c.participants
+      .map((p) => plan.schedule.find((s) => s.task_id === p.task_id))
+      .filter((s): s is ScheduledTask => !!s)
+      .reduce(
+        (min, s) => Math.min(min, new Date(s.start_iso).getTime()),
+        Number.POSITIVE_INFINITY,
+      );
+    if (!Number.isFinite(anchorMs)) continue;
+    const list = prepBuckets.get(anchorMs) ?? [];
+    list.push({ coord: c, anchorMs });
+    prepBuckets.set(anchorMs, list);
+  }
+
+  for (const entries of prepBuckets.values()) {
+    entries.sort((a, b) => a.coord.id.localeCompare(b.coord.id));
+    for (let i = 0; i < entries.length; i++) {
+      const { coord, anchorMs } = entries[i];
+      const startOffsetMin =
+        SHARED_PREP_LEAD_MIN +
+        SHARED_PREP_DEFAULT_DURATION_MIN +
+        i * (SHARED_PREP_DEFAULT_DURATION_MIN + SHARED_PREP_STAGGER_GAP_MIN);
+      const start = new Date(anchorMs - startOffsetMin * 60 * 1000);
+      const end = new Date(
+        start.getTime() + SHARED_PREP_DEFAULT_DURATION_MIN * 60 * 1000,
+      );
+      const others = uniq(
+        coord.participants
+          .map((p) => p.person)
+          .filter((n) => n !== personName),
+      );
+      const groupLabel = humanize(coord.overlap_group ?? "reagent");
+      rows.push({
+        key: `coord__${coord.id}__${personName}`,
+        title: `Shared prep — ${groupLabel}`,
+        day: start.toLocaleDateString(undefined, { weekday: "short", timeZone: "UTC" }),
+        start: formatLocalHm(start),
+        end: formatLocalHm(end),
+        durationMin: SHARED_PREP_DEFAULT_DURATION_MIN,
+        tone: "moss",
+        location: others.length > 0 ? `with ${others.join(", ")}` : "shared",
+        description: coord.recommendation,
+        shared: true,
+      });
+    }
   }
 
   return rows;
+}
+
+function coordinationHasNonzeroSavings(c: NarratedCoordination): boolean {
+  const s = c.savings;
+  if ((s.runs_saved ?? 0) > 0) return true;
+  if ((s.prep_events_saved ?? 0) > 0) return true;
+  if ((s.volume_ml ?? 0) > 0) return true;
+  if ((s.hazardous_disposal_events_avoided ?? 0) > 0) return true;
+  if (s.co2e_kg_range && (s.co2e_kg_range[0] > 0 || s.co2e_kg_range[1] > 0))
+    return true;
+  return false;
 }
 
 function countPassthroughEvents(ics: string): number {
@@ -502,13 +551,14 @@ function countPassthroughEvents(ics: string): number {
 
 /* ---------- helpers ---------- */
 
+// The engine emits ISO UTC strings whose digits are intended as face-value
+// wall-clock time (matches the floating-time convention now used by the ICS
+// exporter — see lib/export/ics.ts::formatIcsFloating). Read the UTC
+// components directly so the preview and the downloaded calendar agree.
 function formatLocalHm(d: Date): string {
   if (Number.isNaN(d.getTime())) return "--:--";
-  return d.toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 }
 
 function humanize(s: string): string {
