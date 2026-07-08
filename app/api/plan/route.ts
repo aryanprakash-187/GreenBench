@@ -33,14 +33,31 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { EngineError, planWeek } from '@/lib/engine';
 import { nextMondayLocalIso, parseIcsToBusy } from '@/lib/engine/ics';
+import { resolveDraft, ResolveDraftError } from '@/lib/engine/resolveDraft';
 import { narrateWeekPlan } from '@/lib/llm/narrate';
-import type { EnginePlanInput, EnrichedProtocol, HydratedTask } from '@/lib/engine/types';
+import type {
+  DraftProtocol,
+  EnginePlanInput,
+  EnrichedProtocol,
+  HydratedTask,
+  ReagentConfirmation,
+} from '@/lib/engine/types';
 
 export const runtime = 'nodejs';
 
 interface IncomingTask {
   task_id?: string;
-  protocol: EnrichedProtocol;
+  /** Pre-hydrated protocol from the legacy /api/match flow. */
+  protocol?: EnrichedProtocol;
+  /** LLM-extracted draft from /api/parse. When set, the route runs
+   *  resolveDraft() on the fly to produce the EnrichedProtocol the engine
+   *  consumes. Mutually exclusive with `protocol`. */
+  draft?: DraftProtocol;
+  /** User-confirmed overlap groups for each reagent in `draft`. */
+  confirmations?: ReagentConfirmation[];
+  /** Sample count when going through the draft path. Required when
+   *  `draft` is set. */
+  sample_count?: number;
 }
 
 interface IncomingPerson {
@@ -96,17 +113,12 @@ export async function POST(req: NextRequest) {
             ? parseIcsToBusy(p.busy_ics_text, weekStartIso)
             : [],
           tasks: p.tasks.map((t, ti): HydratedTask => {
-            if (!t.protocol || typeof t.protocol !== 'object') {
-              throw new EngineError(
-                `people[${pi}].tasks[${ti}] is missing a hydrated protocol.`,
-                'TASK_NO_PROTOCOL'
-              );
-            }
+            const protocol = materializeProtocol(t, pi, ti);
             return {
               task_id:
                 t.task_id ??
-                synthTaskId(p.name!, t.protocol.protocol_name, ti),
-              protocol: t.protocol,
+                synthTaskId(p.name!, protocol.protocol_name, ti),
+              protocol,
             };
           }),
         };
@@ -150,6 +162,59 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/** Turn an IncomingTask (either pre-hydrated `protocol` or LLM `draft` +
+ *  confirmations) into the EnrichedProtocol the engine consumes. Throws an
+ *  EngineError on bad input so the route returns 400 rather than 500. */
+function materializeProtocol(
+  task: IncomingTask,
+  pi: number,
+  ti: number
+): EnrichedProtocol {
+  if (task.protocol && task.draft) {
+    throw new EngineError(
+      `people[${pi}].tasks[${ti}] specified both "protocol" and "draft" — pick one.`,
+      'TASK_AMBIGUOUS_INPUT'
+    );
+  }
+
+  if (task.protocol && typeof task.protocol === 'object') {
+    return task.protocol;
+  }
+
+  if (task.draft && typeof task.draft === 'object') {
+    const sampleCount =
+      typeof task.sample_count === 'number' && Number.isFinite(task.sample_count)
+        ? task.sample_count
+        : 0;
+    if (sampleCount <= 0) {
+      throw new EngineError(
+        `people[${pi}].tasks[${ti}] uses a draft but is missing a positive sample_count.`,
+        'TASK_NO_SAMPLE_COUNT'
+      );
+    }
+    try {
+      return resolveDraft({
+        draft: task.draft,
+        confirmations: task.confirmations ?? [],
+        sample_count: sampleCount,
+      });
+    } catch (err) {
+      if (err instanceof ResolveDraftError) {
+        throw new EngineError(
+          `people[${pi}].tasks[${ti}]: ${err.message}`,
+          err.code
+        );
+      }
+      throw err;
+    }
+  }
+
+  throw new EngineError(
+    `people[${pi}].tasks[${ti}] is missing both "protocol" and "draft".`,
+    'TASK_NO_PROTOCOL'
+  );
 }
 
 function synthTaskId(person: string, protocolName: string, idx: number): string {

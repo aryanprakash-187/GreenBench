@@ -1,4 +1,4 @@
-# BenchGreen data sources and modeling notes
+# LabSync data sources and modeling notes
 
 This bundle was rebuilt conservatively from the uploaded vendor manuals and the project handoff docs.
 

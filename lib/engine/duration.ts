@@ -28,6 +28,12 @@ const FAMILY_BASELINES: Record<string, FamilyBaseline> = {
   // PCR is overwritten by thermal-profile math below; this is the fallback
   // when a protocol is mis-tagged with no profile.
   PCR: { base_min: 60, default_samples: 12, per_extra_sample_min: 0.25 },
+  // Sequencing: the modeled bench duration is the operator's hands-on time to
+  // pool + load the flow cell/cartridge, NOT the ~24 h unattended instrument
+  // run (that lives in equipment.csv run_duration_min for the energy calc).
+  // Keeping it short lets the task fit inside a normal availability window and
+  // lets two people's runs be co-located (pooled) by the scheduler.
+  Sequencing: { base_min: 45, default_samples: 96, per_extra_sample_min: 0.1 },
 };
 
 const PCR_SETUP_MIN = 15;

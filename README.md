@@ -1,4 +1,4 @@
-# BenchGreen Copilot
+# LabSync
 
 A scheduling and coordination layer for university wet labs. Takes the week's planned protocols across multiple lab members, finds shared reagents, shared equipment, and compatible waste streams, and returns a coordinated week plan with a concrete environmental impact summary. Hazard and waste classification is grounded in EPA data — not guessed.
 
@@ -18,7 +18,7 @@ The waste is environmental (single-use plastic, hazardous chemistry, energy-inte
 
 Existing tools — Labos1point5, My Green Lab's freezer challenge — measure the footprint. None of them coordinate the work.
 
-## What BenchGreen does
+## What LabSync does
 
 1. **Takes in a week of planned work** across lab members — who is running what, on which day, with what equipment.
 2. **Parses each protocol** into structured steps, reagents, equipment, timing, and waste.
@@ -167,7 +167,7 @@ Why Next.js: single codebase, no CORS, Vercel deploy in 2 minutes, shadcn/ui loo
 ## Repo layout
 
 ```
-benchgreen/
+labsync/
 ├── app/                      # Next.js pages (three-page flow)
 │   ├── page.tsx              # Page 1: Plan (landing + input)
 │   ├── coordinate/page.tsx   # Page 2: Coordinate (impact + recommendations + stage blocks)

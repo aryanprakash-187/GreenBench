@@ -8,6 +8,7 @@
 // shared event can actually be placed (mutually-free slot, ordering, etc.)
 // and flips Coordination.aligned accordingly.
 
+import { gridCo2ePerKwh } from './data';
 import type {
   Coordination,
   CoordinationCitation,
@@ -110,6 +111,11 @@ export function buildReagentCoordinations(
     const stability = contribs[0].reagent.stability;
     const hazardousReagent = isHazardousByContribs(contribs);
 
+    // Ordinal hazard rank (0–3) from the cached EPA hazard class. The scheduler
+    // uses it to prioritize higher-disposal-burden coordinations under slot
+    // contention. It is a priority weight, not a price — v1 has no cost model.
+    const hazardRankValue = hazardRank(contribs);
+
     // CO2e: per-liter coefficient × saved volume in liters. Only one reagent
     // class per overlap_group, so any contributor is fine.
     const impactPerL = contribs[0].reagent.impact_per_liter;
@@ -155,6 +161,7 @@ export function buildReagentCoordinations(
         co2e_kg_range: co2eRange
           ? [round3(co2eRange[0]), round3(co2eRange[1])]
           : undefined,
+        hazard_rank: hazardRankValue,
       },
       citations,
       aligned: false, // scheduler flips this if alignment succeeds
@@ -194,6 +201,9 @@ export function buildEquipmentCoordinations(
     equipment_group: string;
     lab_id: string | null;
     capacity: number | null;
+    power_draw_kw_active: number | null;
+    run_duration_min: number | null;
+    cost_per_run_usd: number | null;
   }
   const byGroup = new Map<string, EquipMember[]>();
 
@@ -211,11 +221,15 @@ export function buildEquipmentCoordinations(
         equipment_group: eq.equipment_group,
         lab_id: eq.lab_id,
         capacity: eq.capacity,
+        power_draw_kw_active: eq.power_draw_kw_active,
+        run_duration_min: eq.run_duration_min,
+        cost_per_run_usd: eq.cost_per_run_usd,
       });
       byGroup.set(key, list);
     }
   }
 
+  const gridFactor = gridCo2ePerKwh();
   const out: Coordination[] = [];
   let counter = 0;
 
@@ -235,6 +249,28 @@ export function buildEquipmentCoordinations(
       const totalSamples = seg.reduce((s, m) => s + m.task.protocol.sample_count, 0);
       const capacity = seg[0].capacity ?? Infinity;
       const fits = totalSamples <= capacity;
+
+      const runsSaved = fits
+        ? seg.length - 1
+        : Math.max(0, seg.length - Math.ceil(totalSamples / capacity));
+
+      // Item 1 — energy: kWh avoided by consolidating runs. Derived from the
+      // catalog row (power × duration), NOT a hardcoded per-equipment value.
+      //   kwh_per_run  = power_draw_kw_active × (run_duration_min / 60)
+      //   kwh_saved    = runs_saved × kwh_per_run
+      //   energy_co2e  = kwh_saved × grid_factor (eGRID CAMX ≈ 0.195 kg/kWh)
+      // These are pilot estimates (grid factor + durations are documented
+      // assumptions); the UI labels them as such.
+      const powerKw = seg[0].power_draw_kw_active ?? 0;
+      const runDurationH = (seg[0].run_duration_min ?? 0) / 60;
+      const kwhPerRun = powerKw * runDurationH;
+      const kwhSaved = runsSaved * kwhPerRun;
+      const energyCo2eKg = kwhSaved * gridFactor;
+
+      // Item 2 — dollars: only instruments with a real per-run cost (the
+      // sequencer today) contribute. usd_saved = runs_saved × cost_per_run.
+      const costPerRun = seg[0].cost_per_run_usd ?? 0;
+      const usdSaved = runsSaved * costPerRun;
 
       out.push({
         id: `coord_equip_${counter++}_${slug(group)}`,
@@ -257,9 +293,25 @@ export function buildEquipmentCoordinations(
             : `Combined ${totalSamples} samples > capacity ${capacity} — partial batching only.`,
         ],
         savings: {
-          runs_saved: fits ? seg.length - 1 : Math.max(0, seg.length - Math.ceil(totalSamples / capacity)),
+          runs_saved: runsSaved,
+          ...(kwhSaved > 0 ? { kwh_saved: round3(kwhSaved) } : {}),
+          ...(usdSaved > 0 ? { usd_saved: round2(usdSaved) } : {}),
+          // Energy CO2e is a point estimate (single grid factor), so both ends
+          // of the range are equal. Folded into the same co2e range the
+          // reagent coordinations use so the headline reflects total CO2e.
+          ...(energyCo2eKg > 0
+            ? { co2e_kg_range: [round3(energyCo2eKg), round3(energyCo2eKg)] as [number, number] }
+            : {}),
         },
-        citations: [],
+        // Citations are aggregated from the EPA hazard summaries of every
+        // reagent that will be on-deck during the shared run, deduped by
+        // epa_lookup_key. The instrument itself doesn't appear in the EPA
+        // databases, but the chemistries that meet on it do — and that's what
+        // the user is being asked to verify ("am I OK pooling these on one
+        // liquid handler / plate sealer?"). Empty array is preserved for
+        // shared_equipment_run cards with no enriched hazard data, so the
+        // UI's `citations.length > 0` button gate keeps working.
+        citations: collectEquipmentCitations(seg.map((m) => m.task)),
         aligned: false,
       });
     }
@@ -320,6 +372,36 @@ function collectReagentCitations(
   return out;
 }
 
+/** For shared_equipment_run coordinations, surface the EPA hazard data of
+ *  every distinct reagent that lives on the instrument during the batched
+ *  run. We dedupe by epa_lookup_key so the same chemistry isn't repeated
+ *  across multiple participating tasks. Returns [] when none of the
+ *  participating reagents have a hazard summary in the EPA cache — that
+ *  matches the prior behavior so the UI's "Show EPA citations" button stays
+ *  hidden when we genuinely have nothing to cite. */
+function collectEquipmentCitations(
+  tasks: HydratedTask[]
+): CoordinationCitation[] {
+  const seen = new Set<string>();
+  const out: CoordinationCitation[] = [];
+  for (const task of tasks) {
+    for (const reagent of task.protocol.reagents) {
+      const h = reagent.hazard;
+      if (!h) continue;
+      if (seen.has(h.epa_lookup_key)) continue;
+      seen.add(h.epa_lookup_key);
+      out.push({
+        reagent: reagent.normalized_name,
+        rcra_code: h.rcra_code,
+        sources: h.sources,
+        cas_entries: h.cas_entries ?? [],
+        is_tri_listed: h.is_tri_listed === true,
+      });
+    }
+  }
+  return out;
+}
+
 /** Comptox hazard flags that, when set on a reagent's EPA cache entry, mean
  *  separate prep would generate a hazardous disposal event. We deliberately
  *  do NOT include benign tags like `enzyme_master_mix`, `contains_tracking_dye`,
@@ -340,6 +422,41 @@ const HAZARDOUS_COMPTOX_FLAGS = new Set([
  *  flag. This replaces the older substring heuristic that incorrectly
  *  classified every PCR master mix as hazardous on the strength of the
  *  literal substring `master_mix`. */
+// ----- Hazard rank (ChangesToBeMadeForPilot.md §1) -----
+//
+// We have no live reagent prices and no cost model. The only thing we know is
+// the EPA hazard *class* (cached in data/epa_cache.json, never looked up live
+// at request time). We turn that class into a small ordinal so the scheduler
+// can prioritize higher-disposal-burden coordinations under contention. This
+// is a priority weight, not money — there are deliberately no dollar amounts.
+const HAZARD_RANK = {
+  /** EPA RCRA waste code present — regulated hazardous waste. */
+  rcra_regulated: 3,
+  /** A known-hazardous CompTox flag (flammable, corrosive, toxic, …). */
+  hazardous_flag: 2,
+  /** EPA TRI-reportable chemical in the bucket. */
+  tri_listed: 1,
+  /** Low-hazard aqueous default. */
+  benign: 0,
+} as const;
+
+/** Worst-case hazard rank (0–3) across a coordination's contributing reagents,
+ *  from their cached EPA hazard summaries. */
+function hazardRank(contribs: ReagentContribution[]): number {
+  let rank: number = HAZARD_RANK.benign;
+  for (const c of contribs) {
+    const h = c.reagent.hazard;
+    if (!h) continue;
+    // RCRA-listed is the worst rank; short-circuit.
+    if (h.rcra_code) return HAZARD_RANK.rcra_regulated;
+    if ((h.comptox_hazard_flags ?? []).some((f) => HAZARDOUS_COMPTOX_FLAGS.has(f))) {
+      rank = Math.max(rank, HAZARD_RANK.hazardous_flag);
+    }
+    if (h.is_tri_listed) rank = Math.max(rank, HAZARD_RANK.tri_listed);
+  }
+  return rank;
+}
+
 function isHazardousByContribs(contribs: ReagentContribution[]): boolean {
   for (const c of contribs) {
     const h = c.reagent.hazard;
@@ -357,18 +474,24 @@ function synthesizeReagentRecommendation(
   contribs: ReagentContribution[],
   totalUl: number
 ): string {
-  const taskList = contribs
-    .map((c) => `${c.person}'s ${shortProtocol(c.task_id)}`)
-    .join(', ');
   const totalMl = (totalUl / 1000).toFixed(1);
   const display = contribs[0].reagent.normalized_name;
-  return `Prep ${totalMl} mL of ${display} (${group}) once; covers ${taskList}.`;
-}
 
-function shortProtocol(taskId: string): string {
-  // task_id pattern is "<person>__<protocolslug>__<n>"; surface the middle.
-  const parts = taskId.split('__');
-  return parts.length >= 2 ? parts[1] : taskId;
+  // Contributions repeat per task, not per person — e.g. 3 DNA-extraction
+  // runs each for Sohini and Vikas is 6 contributions but only 2 people. List
+  // people once with a run count instead of naming every task instance
+  // (avoids both an unreadable wall of repeated names and, downstream, an
+  // LLM narration body that tries to enumerate every instance and blows past
+  // its 280-char schema limit — see lib/llm/prompts/narrate.md).
+  const runsByPerson = new Map<string, number>();
+  for (const c of contribs) {
+    runsByPerson.set(c.person, (runsByPerson.get(c.person) ?? 0) + 1);
+  }
+  const peopleList = Array.from(runsByPerson.entries())
+    .map(([person, n]) => (n > 1 ? `${person} (${n} runs)` : person))
+    .join(' and ');
+
+  return `Prep ${totalMl} mL of ${display} once instead of ${contribs.length} separate times — covers ${peopleList}.`;
 }
 
 function slug(s: string): string {
@@ -377,6 +500,10 @@ function slug(s: string): string {
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
 }
 
 function round3(n: number): number {

@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Green Bench — Schedule for Sustainability",
+  title: "LabSync — Schedule for Sustainability",
   description:
-    "Green Bench merges lab schedules to reduce reagent waste, hazardous disposal, and energy use. A scheduling copilot for sustainable wet labs.",
+    "LabSync merges lab schedules to reduce reagent waste, hazardous disposal, and energy use. A scheduling copilot for sustainable wet labs.",
 };
 
 export default function RootLayout({

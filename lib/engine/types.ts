@@ -1,10 +1,10 @@
 // Types for the engine's data layer.
 //
 // Layered design (matches the LLM-layer architecture in /docs):
-//   Layer 1: ProtocolMatchResult   <- what the LLM/keyword matcher emits
-//   Layer 2: EnrichedProtocol      <- pure-code join of seed CSVs + EPA cache + equipment
-//   Layer 3: WeekPlanResult        <- engine output (deterministic; defined in scheduler.ts later)
-//   Layer 4: NarratedWeekPlanResult<- LLM narrator output (deferred, separate pass)
+//   Layer 1.5: DraftProtocol        <- what the PDF parser (parseProtocol.ts) emits
+//   Layer 2:   EnrichedProtocol     <- resolveDraft join of draft + seed CSVs + EPA cache + equipment
+//   Layer 3:   WeekPlanResult       <- engine output (deterministic; defined in scheduler.ts later)
+//   Layer 4:   NarratedWeekPlanResult<- LLM narrator output (separate pass)
 //
 // EnrichedProtocol is the contract the (future) deterministic engine consumes.
 // It is intentionally self-contained: every reagent already carries its EPA hazard
@@ -35,32 +35,6 @@ export interface ReagentTermMapRow {
   protocol_examples: string;
 }
 
-export interface ProtocolReagentRow {
-  protocol_name: string;
-  reagent_raw_term: string;
-  volume_per_sample_ul: string;
-  dead_volume_pct: string;
-  per_sample: string;
-  samples_default: string;
-  samples_max: string;
-}
-
-export interface ProtocolThermalProfileRow {
-  protocol_name: string;
-  initial_denature_temp_c: string;
-  initial_denature_time_s: string;
-  cycle_denature_temp_c: string;
-  cycle_denature_time_s: string;
-  annealing_temp_c: string;
-  annealing_time_s: string;
-  extension_temp_c: string;
-  extension_time_s: string;
-  cycles: string;
-  final_extension_temp_c: string;
-  final_extension_time_s: string;
-  notes: string;
-}
-
 export interface ReagentStabilityRow {
   generic_overlap_group: string;
   stable_hours_after_prep: string;
@@ -83,6 +57,21 @@ export interface EquipmentRow {
   capacity: string;
   block_type: string;
   settings_configurable: string;
+  /** Power/energy columns (used to derive per-run kWh; see matcher.ts). */
+  power_profile_group?: string;
+  power_draw_kw_active?: string;
+  power_draw_kw_idle?: string;
+  samples_per_run_low?: string;
+  samples_per_run_high?: string;
+  /** Typical wall-clock run duration in minutes — the basis for the energy
+   *  calc (power × duration). NOT the same as the operator's hands-on bench
+   *  time (that's estimated in duration.ts). A MiSeq run is ~24 h unattended;
+   *  the loading task is far shorter. */
+  run_duration_min?: string;
+  /** All-in cost of one instrument run in USD. Non-zero only for instruments
+   *  with a real per-run consumable/recharge cost (the sequencer today). Pilot
+   *  estimate — confirm with the lab. */
+  cost_per_run_usd?: string;
   notes: string;
 }
 
@@ -93,18 +82,6 @@ export interface EquipmentTermMapRow {
   batchable_yes_no: string;
   core_MVP_yes_no: string;
   notes: string;
-}
-
-/** Rows from /data/seed/protocol_equipment_requirements.csv — the authoritative
- *  mapping of protocol -> equipment needed (by lab catalog id). */
-export interface ProtocolEquipmentRequirementRow {
-  protocol_name: string;
-  equipment_type: string;
-  preferred_model_id: string;
-  required_yes_no: string;
-  batchable_yes_no: string;
-  samples_per_run_default: string;
-  run_duration_min_default: string;
 }
 
 // ----- Enriched (Layer 2) types — what the engine consumes -----
@@ -210,6 +187,14 @@ export interface EquipmentRequirement {
   /** Capacity of the chosen equipment (samples / wells / tubes per run). */
   capacity: number | null;
   batchable: boolean;
+  /** Active power draw (kW) of the chosen catalog row. Null when the row has
+   *  no power data. Used with run_duration_min to derive per-run kWh. */
+  power_draw_kw_active: number | null;
+  /** Typical run duration in minutes for the energy calc (see EquipmentRow). */
+  run_duration_min: number | null;
+  /** All-in USD cost of one run of this instrument (0 for instruments with no
+   *  per-run consumable cost; ~$2k for the sequencer). Pilot estimate. */
+  cost_per_run_usd: number | null;
   notes: string;
 }
 
@@ -327,6 +312,19 @@ export interface CoordinationSavings {
   runs_saved?: number;
   hazardous_disposal_events_avoided?: number;
   co2e_kg_range?: [number, number];
+  /** Electricity avoided by consolidating instrument runs (kWh). Derived as
+   *  runs_saved × power_draw_kw_active × (run_duration_min / 60). Pilot
+   *  estimate — grid factor + durations are documented assumptions. */
+  kwh_saved?: number;
+  /** Dollars avoided by consolidating instrument runs (runs_saved ×
+   *  cost_per_run_usd). Non-zero only for instruments with a real per-run
+   *  cost — today that's the sequencer. Pilot estimate. */
+  usd_saved?: number;
+  /** Ordinal hazard rank (0 = benign aqueous … 3 = RCRA-regulated), derived
+   *  purely from the cached EPA hazard class. The scheduler ranks coordinations
+   *  by this so higher-disposal-burden chemistries win slot contention. It is
+   *  a priority weight, NOT a dollar figure — there is no cost model in v1. */
+  hazard_rank?: number;
 }
 
 export interface Coordination {
@@ -369,6 +367,10 @@ export interface ImpactWeekly {
   estimated_co2e_kg_range: [number, number];
   prep_events_saved: number;
   equipment_runs_saved: number;
+  /** Electricity avoided across all aligned equipment runs (kWh). Pilot estimate. */
+  kwh_saved: number;
+  /** Dollars avoided across all aligned equipment runs (sequencing today). Pilot estimate. */
+  usd_saved: number;
 }
 
 export interface ImpactSummary {
@@ -454,23 +456,114 @@ export interface NarratedWeekPlanResult
   };
 }
 
-// ----- Match result (Layer 1) -----
+// ----- Draft (Layer 1.5) types — what the LLM PDF parser emits -----
+//
+// The hackathon-era pipeline relied on a 9-protocol catalog: an upload was
+// classified to one of those names and then joined against the seed CSVs by
+// hydrateProtocol(). The real product cannot assume the user's PDF is in the
+// catalog, so we now have the LLM extract the full structured contents of the
+// document and emit a `DraftProtocol`.
+//
+// A DraftProtocol is intentionally *not* an EnrichedProtocol:
+//   - reagents carry only the LLM's PROPOSED overlap group, not a confirmed
+//     one. The UI shows a per-reagent confirmation step before any of this
+//     reaches the engine.
+//   - equipment is a free-text hint, not a resolved catalog row.
+//   - hazard data is left empty; resolveDraft() inherits it from the
+//     confirmed overlap group's seed CSV / EPA cache entry, or sets it to
+//     null + adds a missing_information entry when the user marks a reagent
+//     as a new group.
+//
+// resolveDraft() consumes a DraftProtocol plus a user-confirmed mapping and
+// produces the EnrichedProtocol the engine already knows how to schedule.
 
-export interface ProtocolMatchCandidate {
+/** A single reagent as it comes out of the LLM PDF parser. */
+export interface DraftReagent {
+  /** The reagent name as it appears in the PDF, e.g. "Buffer AL", "Wash Solution". */
+  raw_term: string;
+  /** Per-sample volume in microliters. null when the document doesn't quantify
+   *  it (mineral oil overlays, "add to volume", etc.) — `missing_information`
+   *  carries the explanation in that case. */
+  volume_per_sample_ul: number | null;
+  /** Estimated dead-volume percentage (pipetting overhead). The LLM may
+   *  estimate; if it doesn't have a reasonable guess it sets this to null
+   *  and `resolveDraft` falls back to the overlap group's seed default. */
+  dead_volume_pct: number | null;
+  /** Workflow stage; one of "lysis" | "bind" | "wash" | "elute" | "setup" |
+   *  "other". Used by the UI confirmation step and as a hint when the
+   *  reagent doesn't match a known overlap group. */
+  proposed_stage: string;
+  /** The LLM's guess for the closest existing `generic_overlap_group` from
+   *  the closed vocabulary, or the literal string `"new"` to indicate the
+   *  reagent has no obvious analog in the seed term map. */
+  proposed_overlap_group: string;
+  /** Optional CAS Registry Number when the document lists one (vendor SDS,
+   *  reagent ingredient table, etc.). Stored so a future CTX lookup can
+   *  resolve hazard data without a re-parse. */
+  cas_number: string | null;
+  /** True when the LLM thinks this reagent is shareable across multiple
+   *  identical tasks. Defaults to the closed-vocabulary overlap group's
+   *  `shareable_prep` value; `"new"` groups default to false. */
+  shareable_prep: boolean;
+}
+
+/** A single piece of equipment hinted by the PDF parser. */
+export interface DraftEquipmentHint {
+  /** Functional type, e.g. "thermocycler", "centrifuge", "magnetic_separator",
+   *  "liquid_handler". The resolver does a fuzzy match against equipment.csv. */
+  equipment_type: string;
+  /** Free-text model hint pulled from the PDF, e.g. "Thermo KingFisher Flex"
+   *  or "Bio-Rad C1000". May be empty when the doc only says "thermocycler". */
+  model_hint: string;
+}
+
+/** A structured "we couldn't find this in the PDF; please confirm" item. */
+export interface DraftMissingInformation {
+  field: string;
+  why: string;
+}
+
+/** Output of `parseProtocolFromPdf`. The shape mirrors EnrichedProtocol in
+ *  spirit but stays pre-resolution: every field that requires a join against
+ *  the seed term map / EPA cache / equipment catalog is left as the LLM's
+ *  raw guess, to be resolved by `resolveDraft` after the user confirms. */
+export interface DraftProtocol {
+  /** Human-readable protocol title; falls back to the filename when the
+   *  PDF doesn't have a clearer title. */
   protocol_name: string;
-  score: number; // 0..1
-  reasons: string[];
+  /** Vendor name when visible on the document; empty string otherwise. */
+  vendor: string;
+  /** Coarse family bucket. Restricted to the engine's existing families plus
+   *  "Sequencing" (a pooled instrument run, e.g. MiSeq — the load-bearing
+   *  input is sample count, not reagents) and "Other" for novel workflows. */
+  family: 'DNA_extraction' | 'PCR' | 'Bead_cleanup' | 'Sequencing' | 'Other';
+  /** Short slug describing the technique; free-text but the LLM is asked to
+   *  reuse the seed value when one fits. Examples: "spin_column_dna_extraction",
+   *  "endpoint_pcr_96", "magnetic_cleanup_single". */
+  primary_technique: string;
+  /** Sample count the protocol is written for. The user can override; the
+   *  engine ultimately schedules against the user-provided sample count. */
+  samples_default: number;
+  /** Maximum sample count the protocol claims to support, if stated. */
+  samples_max: number;
+  reagents: DraftReagent[];
+  equipment_required: DraftEquipmentHint[];
+  /** PCR-only. null for extraction and cleanup. */
+  thermal_profile: ThermalProfile | null;
+  /** Things the LLM couldn't find or quantify in the PDF. */
+  missing_information: DraftMissingInformation[];
 }
 
-export interface ProtocolMatchResult {
-  /** The chosen protocol_name from /data/seed/protocols_selected.csv,
-   *  or null when no candidate cleared the confidence floor. */
-  protocol_name: string | null;
-  confidence: number; // 0..1
-  matched_via: 'filename' | 'keyword' | 'llm' | 'none';
-  /** Top-K candidates including the chosen one, ordered by score desc. Useful for
-   *  debugging and for the UI to render a disambiguation dropdown when needed. */
-  candidates: ProtocolMatchCandidate[];
-  /** Free-form note for logs / UI tooltips. */
-  notes: string;
+/** Per-reagent user choice from the confirmation UI. One entry per draft
+ *  reagent (matched by `raw_term` since it's unique within a protocol). */
+export interface ReagentConfirmation {
+  raw_term: string;
+  /** The user-confirmed `generic_overlap_group` for this reagent. May be the
+   *  LLM's proposal, a different existing group, or the literal string `"new"`
+   *  when the user explicitly accepts the reagent as a freshly-coined group. */
+  confirmed_overlap_group: string;
+  /** Final per-sample volume in microliters. The UI defaults this to the
+   *  LLM's value; a user can override if the LLM was unsure or wrong. */
+  volume_per_sample_ul: number;
 }
+

@@ -74,5 +74,187 @@
       "https://www.epa.gov/hw/defining-characteristic-ignitability"
     ],
     "pulled_on": "2026-04-19"
+  },
+  "pcr_reaction_water": {
+    "cas_numbers_involved": [
+      { "cas": "7732-18-5", "name": "Water (nuclease-free)", "role": "PCR reaction diluent" }
+    ],
+    "epa_classification": "Reagent-grade nuclease-free water. Not a RCRA-listed waste; safe to drain in dilute aqueous waste streams per local sewer rules.",
+    "tri_reportable": false,
+    "comptox_hazard_flags": [
+      "low_hazard_aqueous"
+    ],
+    "rcra_code": null,
+    "incompatibilities": [],
+    "sources": [
+      "https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes"
+    ],
+    "pulled_on": "2026-04-19"
+  },
+  "shared_prep_buffer": {
+    "cas_numbers_involved": [
+      { "cas": "77-86-1", "name": "Tris base (TRIS)", "role": "Buffering agent" },
+      { "cas": "60-00-4", "name": "EDTA (free acid)", "role": "Chelator" },
+      { "cas": "151-21-3", "name": "Sodium dodecyl sulfate (SDS)", "role": "Lysis surfactant (trace)" }
+    ],
+    "epa_classification": "Mild aqueous lysis/prep buffer (Tris + EDTA + trace SDS). Not RCRA-listed; surfactant fraction warrants segregated disposal review when combined with chaotropic streams.",
+    "tri_reportable": false,
+    "comptox_hazard_flags": [
+      "low_hazard_aqueous",
+      "segregated_disposal_review"
+    ],
+    "rcra_code": null,
+    "incompatibilities": [
+      "hypochlorite_bleach"
+    ],
+    "sources": [
+      "https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes"
+    ],
+    "pulled_on": "2026-04-19"
+  },
+  "pcr_master_mix": {
+    "cas_numbers_involved": [
+      { "cas": "7758-94-3", "name": "Magnesium chloride", "role": "Polymerase cofactor (trace)" },
+      { "cas": "1212-99-3", "name": "Tracking dye (xylene cyanol/bromophenol blue mixture)", "role": "Loading dye component (Platinum II / JumpStart only)" }
+    ],
+    "epa_classification": "Proprietary thermostable polymerase master mix in dilute Tris/KCl/MgCl2 buffer with optional tracking dyes. Not RCRA-listed; dye-containing variants warrant segregation from non-hazardous aqueous streams.",
+    "tri_reportable": false,
+    "comptox_hazard_flags": [
+      "enzyme_master_mix",
+      "contains_tracking_dye",
+      "segregated_disposal_review"
+    ],
+    "rcra_code": null,
+    "incompatibilities": [
+      "hypochlorite_bleach"
+    ],
+    "sources": [
+      "https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes"
+    ],
+    "pulled_on": "2026-04-19"
+  },
+  "primer_mix": {
+    "cas_numbers_involved": [
+      { "cas": "2922-83-0", "name": "Synthetic single-stranded oligonucleotide (representative)", "role": "PCR primer" }
+    ],
+    "epa_classification": "Dilute synthetic oligonucleotides in Tris-EDTA or nuclease-free water. Not RCRA-listed. Treat as benign aqueous waste at PCR concentrations.",
+    "tri_reportable": false,
+    "comptox_hazard_flags": [
+      "low_hazard_aqueous"
+    ],
+    "rcra_code": null,
+    "incompatibilities": [],
+    "sources": [
+      "https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes"
+    ],
+    "pulled_on": "2026-04-19"
+  },
+  "dna_template_pool": {
+    "cas_numbers_involved": [
+      { "cas": "9007-49-2", "name": "Deoxyribonucleic acid (DNA, generic)", "role": "Template" }
+    ],
+    "epa_classification": "Genomic / amplicon DNA template at PCR-input concentrations. Not RCRA-listed when not biohazardous; follow institutional biosafety waste rules for primary samples.",
+    "tri_reportable": false,
+    "comptox_hazard_flags": [
+      "low_hazard_aqueous",
+      "biohazard_review_if_clinical"
+    ],
+    "rcra_code": null,
+    "incompatibilities": [],
+    "sources": [
+      "https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes"
+    ],
+    "pulled_on": "2026-04-19"
+  },
+  "enzyme_mix_prep": {
+    "cas_numbers_involved": [
+      { "cas": "39450-01-6", "name": "Proteinase K", "role": "Protease (lysis)" },
+      { "cas": "9001-99-4", "name": "Ribonuclease A", "role": "RNase (DNA cleanup)" }
+    ],
+    "epa_classification": "Dilute proteolytic / nucleolytic enzyme working stocks in Tris/glycerol storage buffer. Not RCRA-listed; segregate from chaotropic and bleach streams to preserve activity and avoid toxic aerosols.",
+    "tri_reportable": false,
+    "comptox_hazard_flags": [
+      "enzyme_solution",
+      "segregated_disposal_review"
+    ],
+    "rcra_code": null,
+    "incompatibilities": [
+      "hypochlorite_bleach"
+    ],
+    "sources": [
+      "https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes"
+    ],
+    "pulled_on": "2026-04-19"
+  },
+  "pcr_additive_gc_enhancer": {
+    "cas_numbers_involved": [
+      { "cas": "107-43-7", "name": "Betaine (glycine betaine, common GC enhancer)", "role": "PCR GC enhancer (representative formulation)" }
+    ],
+    "epa_classification": "Proprietary GC-rich-template PCR enhancer (commonly betaine- or DMSO-based). Not RCRA-listed at PCR-additive concentrations.",
+    "tri_reportable": false,
+    "comptox_hazard_flags": [
+      "low_hazard_aqueous",
+      "segregated_disposal_review"
+    ],
+    "rcra_code": null,
+    "incompatibilities": [],
+    "sources": [
+      "https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes"
+    ],
+    "pulled_on": "2026-04-19"
+  },
+  "pcr_additive_mineral_oil": {
+    "cas_numbers_involved": [
+      { "cas": "8042-47-5", "name": "Mineral oil (light, white)", "role": "PCR overlay to prevent evaporation" }
+    ],
+    "epa_classification": "Light white mineral oil overlay. Not RCRA-listed but immiscible with aqueous waste; collect in non-halogenated organic / used-oil stream per institutional EHS rules.",
+    "tri_reportable": false,
+    "comptox_hazard_flags": [
+      "non_aqueous_oil",
+      "segregated_disposal_review"
+    ],
+    "rcra_code": null,
+    "incompatibilities": [
+      "strong_oxidizer_waste"
+    ],
+    "sources": [
+      "https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes"
+    ],
+    "pulled_on": "2026-04-19"
+  },
+  "pcr_additive_betaine": {
+    "cas_numbers_involved": [
+      { "cas": "107-43-7", "name": "Betaine (glycine betaine)", "role": "PCR co-solvent / GC enhancer" }
+    ],
+    "epa_classification": "Aqueous betaine stock used as a PCR co-solvent. Not RCRA-listed.",
+    "tri_reportable": false,
+    "comptox_hazard_flags": [
+      "low_hazard_aqueous"
+    ],
+    "rcra_code": null,
+    "incompatibilities": [],
+    "sources": [
+      "https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes"
+    ],
+    "pulled_on": "2026-04-19"
+  },
+  "pcr_additive_dmso": {
+    "cas_numbers_involved": [
+      { "cas": "67-68-5", "name": "Dimethyl sulfoxide (DMSO)", "role": "PCR co-solvent / GC enhancer" }
+    ],
+    "epa_classification": "Dimethyl sulfoxide co-solvent. Not RCRA-listed at PCR-additive concentrations, but skin-permeating carrier; segregate concentrated bulk DMSO waste from oxidizers and acid chlorides per EHS guidance.",
+    "tri_reportable": false,
+    "comptox_hazard_flags": [
+      "skin_permeating_solvent",
+      "segregated_disposal_review"
+    ],
+    "rcra_code": null,
+    "incompatibilities": [
+      "strong_oxidizer_waste"
+    ],
+    "sources": [
+      "https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes"
+    ],
+    "pulled_on": "2026-04-19"
   }
 }

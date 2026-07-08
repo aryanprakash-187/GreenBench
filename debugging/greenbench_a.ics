@@ -1,0 +1,216 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Green Bench//Schedule for Sustainability//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Green Bench · a
+X-WR-TIMEZONE:UTC
+BEGIN:VEVENT
+SUMMARY:Chem Lecture
+DTSTART:20260420T100000
+DTEND:20260420T110000
+DTSTAMP:20260419T074224Z
+UID:sohini-20260420T100000-ChemLecture@example.com
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Dance class
+DTSTART:20260420T120000
+DTEND:20260420T140000
+DTSTAMP:20260419T074224Z
+UID:sohini-20260420T120000-Danceclass@example.com
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Trivia Social
+DTSTART:20260420T200000
+DTEND:20260420T210000
+DTSTAMP:20260419T074224Z
+UID:sohini-20260420T200000-TriviaSocial@example.com
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Oceanography Lecture
+DTSTART:20260421T080000
+DTEND:20260421T092000
+DTSTAMP:20260419T074224Z
+UID:sohini-20260421T080000-OceanographyLecture@example.com
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Physics Lecture
+DTSTART:20260421T160000
+DTEND:20260421T172000
+DTSTAMP:20260419T074224Z
+UID:sohini-20260421T160000-PhysicsLecture@example.com
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Apartment Tour
+DTSTART:20260421T173000
+DTEND:20260421T180000
+DTSTAMP:20260419T074224Z
+UID:sohini-20260421T173000-ApartmentTour@example.com
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Chem Lecture
+DTSTART:20260422T100000
+DTEND:20260422T110000
+DTSTAMP:20260419T074224Z
+UID:sohini-20260422T100000-ChemLecture@example.com
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Dance class
+DTSTART:20260422T130000
+DTEND:20260422T150000
+DTSTAMP:20260419T074224Z
+UID:sohini-20260422T130000-Danceclass@example.com
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Oceanography Lecture
+DTSTART:20260423T080000
+DTEND:20260423T092000
+DTSTAMP:20260419T074224Z
+UID:sohini-20260423T080000-OceanographyLecture@example.com
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Physics Lecture
+DTSTART:20260423T160000
+DTEND:20260423T172000
+DTSTAMP:20260419T074224Z
+UID:sohini-20260423T160000-PhysicsLecture@example.com
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:BMES Meeting
+DTSTART:20260423T150000
+DTEND:20260423T160000
+DTSTAMP:20260419T074224Z
+UID:sohini-20260423T150000-BMESMeeting@example.com
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Chem Lecture
+DTSTART:20260424T100000
+DTEND:20260424T110000
+DTSTAMP:20260419T074224Z
+UID:sohini-20260424T100000-ChemLecture@example.com
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Dance Class
+DTSTART:20260424T120000
+DTEND:20260424T140000
+DTSTAMP:20260419T074224Z
+UID:sohini-20260424T120000-DanceClass@example.com
+END:VEVENT
+BEGIN:VEVENT
+UID:a__agencourt_ampure_xp_pcr_purifica__0@greenbench.local
+DTSTAMP:20260419T170416Z
+DTSTART:20260420T140000Z
+DTEND:20260420T184900Z
+SUMMARY:Green Bench · Agencourt AMPure XP PCR Purification (96-well)
+LOCATION:Green Bench bench · magsep-96-1\, biomek-i5-1\, plate-sealer-1
+DESCRIPTION:Protocol: Agencourt AMPure XP PCR Purification (96-well) (Bead 
+ cleanup)\nEstimated duration: 289 min\nShared with: b\n\nCoordination: Pre
+ p 47.0 mL of paramagnetic cleanup beads once\nSaves 18.3 mL of reagent and
+  1 prep event.\n\nCoordination: Prep 520.0 mL of fresh 70% ethanol wash so
+ lution once\nSaves 103 mL reagent\, 1 prep event\, 1 hazardous disposal\, 
+ ~0.185-0.464 kg CO₂e.\n\nCoordination: Prep 40.0 mL of Reagent Grade Wat
+ er once\nSaves 3.8 mL of reagent and 1 prep event.\n\nCoordination: Batch 
+ magnetic separator runs for a and b\nSaves 0 runs.\n\nCoordination: Batch 
+ liquid handler runs for a and b\nSaves 0 runs.\n\nCoordination: Batch plat
+ e sealer runs for a and b\nSaves 0 runs.\n\nNotes: Shared paramagnetic_cle
+ anup_beads prep with b. | Shared ethanol_wash_solution prep with b. | Shar
+ ed low_salt_elution prep with b. | Batched on magnetic_separator with b. |
+  Batched on liquid_handler with b. | Batched on plate_sealer with b.
+CATEGORIES:GREEN_BENCH,PROTOCOL
+STATUS:CONFIRMED
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:coord_reagent_0_paramagnetic_cleanup_beads__a@greenbench.local
+DTSTAMP:20260419T170416Z
+DTSTART:20260420T131000Z
+DTEND:20260420T133000Z
+SUMMARY:Green Bench · Shared prep · paramagnetic cleanup beads (with b)
+LOCATION:Green Bench prep bench
+DESCRIPTION:Prep 47.0 mL of paramagnetic cleanup beads once\nThis single pr
+ ep covers a's Agencourt AMPure XP PCR purification and b's MagJET NGS clea
+ nup protocol. It combines the needed volume for both tasks.\n\nSaves 18.3 
+ mL of reagent and 1 prep event.\n\nCitations:\n• AMPure XP\n  https://ww
+ w.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radi
+ ological-wastes
+CATEGORIES:GREEN_BENCH,COORDINATION
+STATUS:TENTATIVE
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:coord_reagent_1_ethanol_wash_solution__a@greenbench.local
+DTSTAMP:20260419T170416Z
+DTSTART:20260420T131000Z
+DTEND:20260420T133000Z
+SUMMARY:Green Bench · Shared prep · ethanol wash solution (with b)
+LOCATION:Green Bench prep bench
+DESCRIPTION:Prep 520.0 mL of fresh 70% ethanol wash solution once\nThis sin
+ gle prep covers a's Agencourt AMPure XP PCR purification and b's MagJET NG
+ S cleanup protocol. One pour of fresh 70% ethanol covers all seeded cleanu
+ ps.\n\nSaves 103 mL reagent\, 1 prep event\, 1 hazardous disposal\, ~0.185
+ -0.464 kg CO₂e.\n\nCitations:\n• fresh_70_percent_ethanol [D001]\n  ht
+ tps://www.epa.gov/hw/defining-characteristic-ignitability
+CATEGORIES:GREEN_BENCH,COORDINATION
+STATUS:TENTATIVE
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:coord_reagent_2_low_salt_elution__a@greenbench.local
+DTSTAMP:20260419T170416Z
+DTSTART:20260420T131000Z
+DTEND:20260420T133000Z
+SUMMARY:Green Bench · Shared prep · low salt elution (with b)
+LOCATION:Green Bench prep bench
+DESCRIPTION:Prep 40.0 mL of Reagent Grade Water once\nThis single prep cove
+ rs a's Agencourt AMPure XP PCR purification and b's MagJET NGS cleanup pro
+ tocol. Elution buffer/water can be staged once for coordinated cleanup blo
+ cks.\n\nSaves 3.8 mL of reagent and 1 prep event.\n\nCitations:\n• Reage
+ nt Grade Water
+CATEGORIES:GREEN_BENCH,COORDINATION
+STATUS:TENTATIVE
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:coord_equip_0_magnetic_separator__a@greenbench.local
+DTSTAMP:20260419T170416Z
+DTSTART:20260420T140000Z
+DTEND:20260420T184900Z
+SUMMARY:Green Bench · Shared magnetic separator run (with b)
+LOCATION:Green Bench bench · magnetic separator
+DESCRIPTION:Batch magnetic separator runs for a and b\nBoth a and b need th
+ e magnetic separator. Their combined 900 samples exceed the capacity of 96
+ \, so consider two batched runs instead of two separate ones.\n\nSaves 0 r
+ uns.
+CATEGORIES:GREEN_BENCH,COORDINATION
+STATUS:TENTATIVE
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:coord_equip_1_liquid_handler__a@greenbench.local
+DTSTAMP:20260419T170416Z
+DTSTART:20260420T140000Z
+DTEND:20260420T184900Z
+SUMMARY:Green Bench · Shared liquid handler run (with b)
+LOCATION:Green Bench bench · liquid handler
+DESCRIPTION:Batch liquid handler runs for a and b\nBoth a and b need the li
+ quid handler. Their combined 900 samples exceed the capacity of 96\, so co
+ nsider two batched runs instead of two separate ones.\n\nSaves 0 runs.
+CATEGORIES:GREEN_BENCH,COORDINATION
+STATUS:TENTATIVE
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:coord_equip_2_plate_sealer__a@greenbench.local
+DTSTAMP:20260419T170416Z
+DTSTART:20260420T140000Z
+DTEND:20260420T184900Z
+SUMMARY:Green Bench · Shared plate sealer run (with b)
+LOCATION:Green Bench bench · plate sealer
+DESCRIPTION:Batch plate sealer runs for a and b\nBoth a and b need the plat
+ e sealer. Their combined 900 samples exceed the capacity of 384\, so consi
+ der two batched runs instead of two separate ones.\n\nSaves 0 runs.
+CATEGORIES:GREEN_BENCH,COORDINATION
+STATUS:TENTATIVE
+TRANSP:OPAQUE
+END:VEVENT
+END:VCALENDAR

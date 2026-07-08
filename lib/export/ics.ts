@@ -37,11 +37,9 @@ import type {
   NarratedWeekPlanResult,
   ScheduledTask,
 } from '@/lib/engine/types';
+import { computeSharedPrepSlots } from '@/lib/engine/sharedPrep';
 
-const GREENBENCH_PRODID = '-//Green Bench//Schedule for Sustainability//EN';
-const SHARED_PREP_LEAD_MIN = 30; // first prep block ends this many min before the earliest user task
-const SHARED_PREP_DEFAULT_DURATION_MIN = 20;
-const SHARED_PREP_STAGGER_GAP_MIN = 5; // breathing room between back-to-back staggered preps
+const LABSYNC_PRODID = '-//LabSync//Schedule for Sustainability//EN';
 
 export interface BuildPersonIcsOptions {
   /** Display name; matches ScheduledTask.person and Coordination.participants[].person. */
@@ -62,10 +60,10 @@ export function buildPersonIcs(opts: BuildPersonIcsOptions): string {
   const lines: string[] = [];
   lines.push('BEGIN:VCALENDAR');
   lines.push('VERSION:2.0');
-  lines.push(`PRODID:${GREENBENCH_PRODID}`);
+  lines.push(`PRODID:${LABSYNC_PRODID}`);
   lines.push('CALSCALE:GREGORIAN');
   lines.push('METHOD:PUBLISH');
-  lines.push(`X-WR-CALNAME:Green Bench · ${escapeText(opts.personName)}`);
+  lines.push(`X-WR-CALNAME:LabSync · ${escapeText(opts.personName)}`);
   // We deliberately do NOT emit X-WR-TIMEZONE. This non-standard header is
   // honored by Google Calendar (and partially by Apple) as "interpret every
   // naive DTSTART/DTEND in this calendar as being in this zone". The user's
@@ -74,7 +72,7 @@ export function buildPersonIcs(opts: BuildPersonIcsOptions): string {
   // timezone the viewer is sitting in. Declaring X-WR-TIMEZONE:UTC made
   // Google reinterpret a 10:00:00 floating event as 10:00 UTC and shift it
   // by the viewer's offset (e.g. 3am in GMT-7), which is wrong. Engine-
-  // emitted Green Bench events use explicit `Z` UTC times so they convert
+  // emitted LabSync events use explicit `Z` UTC times so they convert
   // correctly with or without the header.
 
   // 1. Pass-through of the user's original VEVENT blocks. We grab them
@@ -97,45 +95,25 @@ export function buildPersonIcs(opts: BuildPersonIcsOptions): string {
   //    upstream) — those exist in the engine output as advisory cards
   //    but have no business as calendar blocks.
   //
-  //    For the surviving reagent preps we group by their anchor task's
-  //    earliest start so we can stagger sibling preps back-to-back. A
-  //    single human cannot prep three reagents simultaneously, and the
-  //    previous behaviour stacked them all in the same 20-min slot.
-  type PrepEntry = { coord: NarratedCoordination; earliestStart: number };
-  const prepBuckets = new Map<number, PrepEntry[]>();
+  //    For the surviving reagent preps, lib/engine/sharedPrep.ts is the
+  //    single source of the staggered start/end math (shared with the
+  //    calendar preview and the coordination cards, so all three agree).
+  const prepSlots = computeSharedPrepSlots(opts.plan.coordinations, opts.plan.schedule);
   for (const coord of opts.plan.coordinations) {
     if (!coord.participants.some((p) => p.person === opts.personName)) continue;
     if (coord.type !== 'shared_reagent_prep') continue;
     if (!coordinationHasNonzeroSavings(coord)) continue;
-    const earliestStart = earliestParticipantStartMs(coord, opts.plan);
-    if (earliestStart === null) continue;
-    const list = prepBuckets.get(earliestStart) ?? [];
-    list.push({ coord, earliestStart });
-    prepBuckets.set(earliestStart, list);
-  }
-
-  for (const entries of prepBuckets.values()) {
-    // Stable order so the same plan produces the same staggered layout
-    // every time (deterministic ICS for tests + diff-friendly exports).
-    entries.sort((a, b) => a.coord.id.localeCompare(b.coord.id));
-    for (let i = 0; i < entries.length; i++) {
-      const { coord, earliestStart } = entries[i];
-      const startOffsetMin =
-        SHARED_PREP_LEAD_MIN +
-        SHARED_PREP_DEFAULT_DURATION_MIN +
-        i * (SHARED_PREP_DEFAULT_DURATION_MIN + SHARED_PREP_STAGGER_GAP_MIN);
-      const start = new Date(earliestStart - startOffsetMin * 60 * 1000);
-      const end = new Date(start.getTime() + SHARED_PREP_DEFAULT_DURATION_MIN * 60 * 1000);
-      lines.push(
-        ...buildSharedReagentPrepVevent({
-          coord,
-          start,
-          end,
-          personName: opts.personName,
-          stamp,
-        })
-      );
-    }
+    const slot = prepSlots.get(coord.id);
+    if (!slot) continue;
+    lines.push(
+      ...buildSharedReagentPrepVevent({
+        coord,
+        start: slot.start,
+        end: slot.end,
+        personName: opts.personName,
+        stamp,
+      })
+    );
   }
 
   lines.push('END:VCALENDAR');
@@ -158,8 +136,8 @@ function buildTaskVevent(args: {
     .filter(Boolean)
     .join(', ');
   const location = equipmentLabel
-    ? `Green Bench bench · ${equipmentLabel}`
-    : 'Green Bench bench';
+    ? `LabSync bench · ${equipmentLabel}`
+    : 'LabSync bench';
 
   const descriptionParts: string[] = [];
   descriptionParts.push(
@@ -215,14 +193,14 @@ function buildTaskVevent(args: {
 
   const out: string[] = [];
   out.push('BEGIN:VEVENT');
-  out.push(`UID:${task.task_id}@greenbench.local`);
+  out.push(`UID:${task.task_id}@labsync.local`);
   out.push(`DTSTAMP:${stamp}`);
   out.push(`DTSTART:${formatIcsFloatingFromIso(task.start_iso)}`);
   out.push(`DTEND:${formatIcsFloatingFromIso(task.end_iso)}`);
-  out.push(`SUMMARY:Green Bench · ${escapeText(task.protocol_name)}`);
+  out.push(`SUMMARY:LabSync · ${escapeText(task.protocol_name)}`);
   out.push(`LOCATION:${escapeText(location)}`);
   out.push(`DESCRIPTION:${escapeText(description)}`);
-  out.push('CATEGORIES:GREEN_BENCH,PROTOCOL');
+  out.push('CATEGORIES:LABSYNC,PROTOCOL');
   out.push('STATUS:CONFIRMED');
   out.push('TRANSP:OPAQUE');
   out.push('END:VEVENT');
@@ -240,8 +218,8 @@ function buildSharedReagentPrepVevent(args: {
 }): string[] {
   const { coord, start, end, personName, stamp } = args;
 
-  const summary = `Green Bench · Shared prep · ${humanize(coord.overlap_group ?? 'reagent')}`;
-  const location = 'Green Bench prep bench';
+  const summary = `LabSync · Shared prep · ${humanize(coord.overlap_group ?? 'reagent')}`;
+  const location = 'LabSync prep bench';
 
   const otherPeople = uniq(
     coord.participants.map((p) => p.person).filter((n) => n !== personName)
@@ -274,14 +252,14 @@ function buildSharedReagentPrepVevent(args: {
 
   const out: string[] = [];
   out.push('BEGIN:VEVENT');
-  out.push(`UID:${coord.id}__${slug(personName)}@greenbench.local`);
+  out.push(`UID:${coord.id}__${slug(personName)}@labsync.local`);
   out.push(`DTSTAMP:${stamp}`);
   out.push(`DTSTART:${formatIcsFloating(start)}`);
   out.push(`DTEND:${formatIcsFloating(end)}`);
   out.push(`SUMMARY:${escapeText(summary + peopleSuffix)}`);
   out.push(`LOCATION:${escapeText(location)}`);
   out.push(`DESCRIPTION:${escapeText(description)}`);
-  out.push('CATEGORIES:GREEN_BENCH,COORDINATION');
+  out.push('CATEGORIES:LABSYNC,COORDINATION');
   out.push('STATUS:TENTATIVE');
   out.push('TRANSP:OPAQUE');
   out.push('END:VEVENT');
@@ -289,23 +267,6 @@ function buildSharedReagentPrepVevent(args: {
 }
 
 // ----- Coordination filtering helpers -----
-
-/** Earliest scheduled-task start (in ms) across this coordination's participants,
- *  or null if none of the participant tasks are actually in the schedule. */
-function earliestParticipantStartMs(
-  coord: NarratedCoordination,
-  plan: NarratedWeekPlanResult
-): number | null {
-  const partTasks = coord.participants
-    .map((p) => plan.schedule.find((s) => s.task_id === p.task_id))
-    .filter((s): s is ScheduledTask => !!s);
-  if (partTasks.length === 0) return null;
-  const earliest = partTasks.reduce((min, s) => {
-    const t = new Date(s.start_iso).getTime();
-    return t < min ? t : min;
-  }, Number.POSITIVE_INFINITY);
-  return Number.isFinite(earliest) ? earliest : null;
-}
 
 /** True iff the coordination claims any concrete saving. The matcher can
  *  emit zero-savings shared_equipment_run entries when combined samples
@@ -478,5 +439,5 @@ export function suggestIcsFilename(personName: string): string {
     .replace(/\s+/g, '_')
     .replace(/[^a-z0-9_]/g, '')
     .slice(0, 40) || 'person';
-  return `greenbench_${safe}.ics`;
+  return `labsync_${safe}.ics`;
 }

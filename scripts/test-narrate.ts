@@ -18,7 +18,7 @@
 // Run:   npx tsx scripts/test-narrate.ts
 // Live:  npx tsx scripts/test-narrate.ts --llm
 
-// Load .env.local first so GEMINI_API_KEY is available when --llm is set.
+// Load .env.local first so ANTHROPIC_API_KEY is available when --llm is set.
 // (Next.js loads it automatically in dev/prod; standalone tsx scripts don't.)
 import { config as dotenvConfig } from 'dotenv';
 import { existsSync } from 'node:fs';
@@ -27,18 +27,20 @@ const envLocal = resolve(process.cwd(), '.env.local');
 if (existsSync(envLocal)) dotenvConfig({ path: envLocal });
 else dotenvConfig();
 
-import { hydrateProtocol } from '../lib/engine/hydrate';
 import { planWeek } from '../lib/engine';
 import { nextMondayLocalIso } from '../lib/engine/ics';
 import { narrateWeekPlan } from '../lib/llm/narrate';
 import type {
   EnginePlanInput,
-  HydratedTask,
   NarratedWeekPlanResult,
   WeekPlanResult,
 } from '../lib/engine/types';
+import { cleanupProtocol, pcrProtocol, task } from './fixtures';
 
-const HEADLINE_MAX = 90;
+// Keep in sync with the clamp in lib/llm/narrate.ts (bumped from 90 → 200 so
+// the engine's full deterministic recommendation passes through without a
+// truncating "…"). The zod limit in lib/llm/schemas.ts matches.
+const HEADLINE_MAX = 200;
 const BODY_MAX = 280;
 
 interface Failure {
@@ -47,52 +49,16 @@ interface Failure {
 }
 
 function buildPlan(): EnginePlanInput {
-  const sohiniDneasy = hydrateProtocol({
-    protocol_name: 'DNeasy Blood & Tissue',
-    sample_count: 8,
-    matched_via: 'manual',
-  });
-  const sohiniMagjet = hydrateProtocol({
-    protocol_name: 'MagJET Genomic DNA Kit',
-    sample_count: 4,
-    matched_via: 'manual',
-  });
-  const vikasQ5 = hydrateProtocol({
-    protocol_name: 'Q5 Hot Start High-Fidelity 2X Master Mix',
-    sample_count: 12,
-    matched_via: 'manual',
-  });
-  const vikasAmpure = hydrateProtocol({
-    protocol_name: 'Agencourt AMPure XP PCR Purification',
-    sample_count: 12,
-    matched_via: 'manual',
-  });
-
-  const task = (id: string, protocol: typeof sohiniDneasy): HydratedTask => ({
-    task_id: id,
-    protocol,
-  });
-
   return {
     week_start_iso: nextMondayLocalIso(),
-    people: [
-      {
-        name: 'Sohini',
-        busy: [],
-        tasks: [
-          task('sohini__dneasy__1', sohiniDneasy),
-          task('sohini__magjet__1', sohiniMagjet),
-        ],
-      },
-      {
-        name: 'Vikas',
-        busy: [],
-        tasks: [
-          task('vikas__q5__1', vikasQ5),
-          task('vikas__ampure__1', vikasAmpure),
-        ],
-      },
-    ],
+    people: ['Aryan', 'Sohini', 'Vikas'].map((name) => ({
+      name,
+      busy: [],
+      tasks: [
+        task(name, pcrProtocol(24), 1),
+        task(name, cleanupProtocol(24), 2),
+      ],
+    })),
   };
 }
 

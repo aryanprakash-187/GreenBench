@@ -1,9 +1,9 @@
-# BenchGreen demo script (90 seconds)
+# LabSync demo script (90 seconds)
 
 Last week I ran DNA extraction on Monday and my labmate ran PCR on Tuesday and cleanup on Wednesday.
 We prepped wash solvent separately, used shared equipment in underfilled runs, and handled waste in disconnected steps.
 
-BenchGreen fixes that.
+LabSync fixes that.
 
 On the first page, we assign each person a protocol and sample count, then upload their busy calendar.
 Behind the scenes, the app normalizes the protocols into reagents, consumables, equipment, timings, and waste streams.

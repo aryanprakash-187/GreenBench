@@ -19,6 +19,8 @@ export function rollupImpact(coordinations: Coordination[]): ImpactSummary {
     estimated_co2e_kg_range: [0, 0],
     prep_events_saved: 0,
     equipment_runs_saved: 0,
+    kwh_saved: 0,
+    usd_saved: 0,
   };
 
   for (const c of coordinations) {
@@ -29,6 +31,8 @@ export function rollupImpact(coordinations: Coordination[]): ImpactSummary {
     if (s.runs_saved) weekly.equipment_runs_saved += s.runs_saved;
     if (s.hazardous_disposal_events_avoided)
       weekly.hazardous_disposal_events_avoided += s.hazardous_disposal_events_avoided;
+    if (s.kwh_saved) weekly.kwh_saved += s.kwh_saved;
+    if (s.usd_saved) weekly.usd_saved += s.usd_saved;
     if (s.co2e_kg_range) {
       weekly.estimated_co2e_kg_range[0] += s.co2e_kg_range[0];
       weekly.estimated_co2e_kg_range[1] += s.co2e_kg_range[1];
@@ -37,6 +41,8 @@ export function rollupImpact(coordinations: Coordination[]): ImpactSummary {
 
   // Round for readability.
   weekly.reagent_volume_saved_ml = round1(weekly.reagent_volume_saved_ml);
+  weekly.kwh_saved = round2(weekly.kwh_saved);
+  weekly.usd_saved = round2(weekly.usd_saved);
   weekly.estimated_co2e_kg_range = [
     round2(weekly.estimated_co2e_kg_range[0]),
     round2(weekly.estimated_co2e_kg_range[1]),
@@ -53,6 +59,8 @@ export function rollupImpact(coordinations: Coordination[]): ImpactSummary {
     ],
     prep_events_saved: weekly.prep_events_saved * 52,
     equipment_runs_saved: weekly.equipment_runs_saved * 52,
+    kwh_saved: round2(weekly.kwh_saved * 52),
+    usd_saved: round2(weekly.usd_saved * 52),
   };
 
   return { weekly, annualized_if_repeated: annualized };

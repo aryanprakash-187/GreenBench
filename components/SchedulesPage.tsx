@@ -11,18 +11,15 @@ import {
   type SubmissionPersonInput,
 } from "@/lib/submission";
 import { buildPersonIcs, suggestIcsFilename } from "@/lib/export/ics";
+import {
+  computeSharedPrepSlots,
+  SHARED_PREP_DEFAULT_DURATION_MIN,
+} from "@/lib/engine/sharedPrep";
 import type {
   NarratedCoordination,
   NarratedWeekPlanResult,
   ScheduledTask,
 } from "@/lib/engine/types";
-
-// Mirrors the ICS exporter — see lib/export/ics.ts for rationale. Multiple
-// shared reagent preps that anchor to the same task are nested back-to-back
-// (DURATION + GAP minutes apart) instead of stacked at one slot.
-const SHARED_PREP_LEAD_MIN = 30;
-const SHARED_PREP_DEFAULT_DURATION_MIN = 20;
-const SHARED_PREP_STAGGER_GAP_MIN = 5;
 
 type SchedulesPageProps = {
   onBack?: () => void;
@@ -164,7 +161,7 @@ export default function SchedulesPage({ onBack }: SchedulesPageProps = {}) {
 
         {loadState === "ok" && personRows.length > 0 && (
           <p className="pt-2 text-center text-xs text-forest-800/55">
-            Events added by Green Bench preserve every original VEVENT from
+            Events added by LabSync preserve every original VEVENT from
             your uploaded calendar; new events are tagged in the description
             so they&rsquo;re easy to spot.
           </p>
@@ -391,6 +388,16 @@ function buildPersonRows(
   inputs: SubmissionPersonInput[],
 ): PersonRow[] {
   // Union of input names + people the engine actually scheduled.
+  //
+  // CAVEAT: `inputs` can legitimately contain two entries with the same
+  // name (a labmate card + a separate sequencing-run card — see
+  // `SequencingRun` in components/HomeForm.tsx). This Map is keyed by name,
+  // so whichever entry appears LAST in `inputs` wins for `schedule_ics_text`
+  // here — same "last one wins by name" shape as
+  // lib/engine/scheduler.ts's `freeByPerson`. It's harmless when both
+  // entries carry the identical calendar (the intended usage), but if they
+  // ever differ, the downloaded .ics preview below will only pass through
+  // ONE of the two calendars' original events, not both.
   const seen = new Map<string, SubmissionPersonInput | null>();
   for (const p of inputs) {
     if (p.name?.trim()) seen.set(p.name.trim(), p);
@@ -469,63 +476,36 @@ function describePersonEvents(
   // why shared_equipment_run is excluded (each participant already owns a
   // task event at that time with the equipment in its location). We also
   // drop coordinations with no real net savings (e.g. equipment shares
-  // clamped to runs_saved=0 by capacity math). Multiple preps anchored to
-  // the same task are staggered back-to-back so a single human can
-  // realistically execute them sequentially instead of all at once.
-  type PrepEntry = { coord: NarratedCoordination; anchorMs: number };
-  const prepBuckets = new Map<number, PrepEntry[]>();
-  for (const c of plan.coordinations) {
-    if (!c.participants.some((p) => p.person === personName)) continue;
-    if (c.type !== "shared_reagent_prep") continue;
-    if (!coordinationHasNonzeroSavings(c)) continue;
-    const partTask = plan.schedule.find((s) =>
-      c.participants.some((p) => p.task_id === s.task_id),
+  // clamped to runs_saved=0 by capacity math). lib/engine/sharedPrep.ts is
+  // the single source of the staggered start/end math (shared with the
+  // .ics export and the coordination cards, so all three agree on when a
+  // given prep actually happens).
+  const prepSlots = computeSharedPrepSlots(plan.coordinations, plan.schedule);
+  for (const coord of plan.coordinations) {
+    if (!coord.participants.some((p) => p.person === personName)) continue;
+    if (coord.type !== "shared_reagent_prep") continue;
+    if (!coordinationHasNonzeroSavings(coord)) continue;
+    const slot = prepSlots.get(coord.id);
+    if (!slot) continue;
+    const { start, end } = slot;
+    const others = uniq(
+      coord.participants
+        .map((p) => p.person)
+        .filter((n) => n !== personName),
     );
-    if (!partTask) continue;
-    const anchorMs = c.participants
-      .map((p) => plan.schedule.find((s) => s.task_id === p.task_id))
-      .filter((s): s is ScheduledTask => !!s)
-      .reduce(
-        (min, s) => Math.min(min, new Date(s.start_iso).getTime()),
-        Number.POSITIVE_INFINITY,
-      );
-    if (!Number.isFinite(anchorMs)) continue;
-    const list = prepBuckets.get(anchorMs) ?? [];
-    list.push({ coord: c, anchorMs });
-    prepBuckets.set(anchorMs, list);
-  }
-
-  for (const entries of prepBuckets.values()) {
-    entries.sort((a, b) => a.coord.id.localeCompare(b.coord.id));
-    for (let i = 0; i < entries.length; i++) {
-      const { coord, anchorMs } = entries[i];
-      const startOffsetMin =
-        SHARED_PREP_LEAD_MIN +
-        SHARED_PREP_DEFAULT_DURATION_MIN +
-        i * (SHARED_PREP_DEFAULT_DURATION_MIN + SHARED_PREP_STAGGER_GAP_MIN);
-      const start = new Date(anchorMs - startOffsetMin * 60 * 1000);
-      const end = new Date(
-        start.getTime() + SHARED_PREP_DEFAULT_DURATION_MIN * 60 * 1000,
-      );
-      const others = uniq(
-        coord.participants
-          .map((p) => p.person)
-          .filter((n) => n !== personName),
-      );
-      const groupLabel = humanize(coord.overlap_group ?? "reagent");
-      rows.push({
-        key: `coord__${coord.id}__${personName}`,
-        title: `Shared prep — ${groupLabel}`,
-        day: start.toLocaleDateString(undefined, { weekday: "short", timeZone: "UTC" }),
-        start: formatLocalHm(start),
-        end: formatLocalHm(end),
-        durationMin: SHARED_PREP_DEFAULT_DURATION_MIN,
-        tone: "moss",
-        location: others.length > 0 ? `with ${others.join(", ")}` : "shared",
-        description: coord.recommendation,
-        shared: true,
-      });
-    }
+    const groupLabel = humanize(coord.overlap_group ?? "reagent");
+    rows.push({
+      key: `coord__${coord.id}__${personName}`,
+      title: `Shared prep — ${groupLabel}`,
+      day: start.toLocaleDateString(undefined, { weekday: "short", timeZone: "UTC" }),
+      start: formatLocalHm(start),
+      end: formatLocalHm(end),
+      durationMin: SHARED_PREP_DEFAULT_DURATION_MIN,
+      tone: "moss",
+      location: others.length > 0 ? `with ${others.join(", ")}` : "shared",
+      description: coord.recommendation,
+      shared: true,
+    });
   }
 
   return rows;

@@ -57,7 +57,7 @@ export class PubChemClient {
     this.timeoutMs = opts.timeoutMs ?? 15_000;
     this.userAgent =
       opts.userAgent ??
-      'BenchGreen-EPA-Enrichment/0.1 (hackathon project; contact via repo)';
+      'LabSync-EPA-Enrichment/0.1 (hackathon project; contact via repo)';
   }
 
   async lookup(args: { cas?: string; name?: string }): Promise<HazardEntry> {

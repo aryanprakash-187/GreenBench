@@ -161,51 +161,9 @@
     }
   },
   "equipment_energy": {
-    "grid_co2e_kg_per_kwh": {
-      "low": 0.25,
-      "mid": 0.4,
-      "high": 0.6
-    },
-    "liquid_handler": {
-      "cycle_kwh_per_run": {
-        "low": 0.45,
-        "mid": 0.9,
-        "high": 1.5
-      },
-      "source": "Mock standard common liquid-handler range for 300-900 sample cleanup blocks."
-    },
-    "magnetic_separator": {
-      "cycle_kwh_per_run": {
-        "low": 0.02,
-        "mid": 0.05,
-        "high": 0.1
-      },
-      "source": "Mock passive/low-power magnetic separation cycle range."
-    },
-    "plate_sealer": {
-      "cycle_kwh_per_run": {
-        "low": 0.03,
-        "mid": 0.06,
-        "high": 0.12
-      },
-      "source": "Mock shared plate-sealing cycle range."
-    },
-    "thermocycler": {
-      "cycle_kwh_per_run": {
-        "low": 0.8,
-        "mid": 1.4,
-        "high": 2.2
-      },
-      "source": "Demo-only thermocycler cycle range."
-    },
-    "centrifuge": {
-      "cycle_kwh_per_run": {
-        "low": 0.15,
-        "mid": 0.35,
-        "high": 0.6
-      },
-      "source": "Demo-only centrifuge cycle range."
-    }
+    "grid_co2e_kg_per_kwh": 0.195,
+    "grid_co2e_source": "EPA eGRID2023 subregion CAMX (WECC California) = 429.98 lb CO2e/MWh ~= 0.195 kg CO2e/kWh (https://www.epa.gov/egrid/summary-data). Regional grid average; label as pilot estimate.",
+    "notes": "Per-run kWh is now DERIVED in the engine as power_draw_kw_active x (run_duration_min / 60) using data/seed/equipment.csv, not hardcoded here. Only the grid emission factor lives in this file."
   },
-  "notes": "All coefficients are mock/demo assumptions for visible impact output. They are not publication-grade life-cycle values."
+  "notes": "Reagent + consumable coefficients are mock/demo assumptions for visible impact output (not publication-grade). The grid emission factor under equipment_energy is a real EPA eGRID regional average, still surfaced in the UI as a pilot estimate."
 }

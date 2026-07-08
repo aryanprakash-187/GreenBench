@@ -1,6 +1,6 @@
 // POST /api/narrate
 //
-// Layer 4 of the BenchGreen pipeline: take a deterministic WeekPlanResult
+// Layer 4 of the LabSync pipeline: take a deterministic WeekPlanResult
 // (typically from /api/plan) and return a NarratedWeekPlanResult with prose
 // fields attached to each coordination, separation, and the impact card.
 //

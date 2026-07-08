@@ -15,10 +15,7 @@ import type {
   EquipmentRow,
   EquipmentTermMapRow,
   OverlapRuleRow,
-  ProtocolEquipmentRequirementRow,
-  ProtocolReagentRow,
   ProtocolSelectedRow,
-  ProtocolThermalProfileRow,
   ReagentStabilityRow,
   ReagentTermMapRow,
 } from './types';
@@ -55,22 +52,6 @@ let _reagentMap: ReagentTermMapRow[] | null = null;
 export function loadReagentTermMap(): ReagentTermMapRow[] {
   if (!_reagentMap) _reagentMap = readCsv<ReagentTermMapRow>('reagent_term_map.csv');
   return _reagentMap;
-}
-
-let _protocolReagents: ProtocolReagentRow[] | null = null;
-export function loadProtocolReagents(): ProtocolReagentRow[] {
-  if (!_protocolReagents) {
-    _protocolReagents = readCsv<ProtocolReagentRow>('protocol_reagents.csv');
-  }
-  return _protocolReagents;
-}
-
-let _thermalProfiles: ProtocolThermalProfileRow[] | null = null;
-export function loadThermalProfiles(): ProtocolThermalProfileRow[] {
-  if (!_thermalProfiles) {
-    _thermalProfiles = readCsv<ProtocolThermalProfileRow>('protocol_thermal_profiles.csv');
-  }
-  return _thermalProfiles;
 }
 
 let _stability: ReagentStabilityRow[] | null = null;
@@ -116,16 +97,6 @@ export function loadEquipmentTermMap(): EquipmentTermMapRow[] {
     _equipmentTermMap = readCsv<EquipmentTermMapRow>('equipment_term_map.csv');
   }
   return _equipmentTermMap;
-}
-
-let _protocolEquipmentReqs: ProtocolEquipmentRequirementRow[] | null = null;
-export function loadProtocolEquipmentRequirements(): ProtocolEquipmentRequirementRow[] {
-  if (!_protocolEquipmentReqs) {
-    _protocolEquipmentReqs = readCsv<ProtocolEquipmentRequirementRow>(
-      'protocol_equipment_requirements.csv'
-    );
-  }
-  return _protocolEquipmentReqs;
 }
 
 // ----- EPA + impact JSON -----
@@ -191,6 +162,13 @@ interface ImpactCoefficientsShape {
     }
   >;
   consumables?: Record<string, unknown>;
+  equipment_energy?: {
+    /** Grid emission factor in kg CO2e per kWh. Single grounded value (EPA
+     *  eGRID CAMX), not a mock range. */
+    grid_co2e_kg_per_kwh?: number;
+    grid_co2e_source?: string;
+    notes?: string;
+  };
   notes?: string;
 }
 
@@ -198,6 +176,14 @@ let _impact: ImpactCoefficientsShape | null = null;
 export function loadImpactCoefficients(): ImpactCoefficientsShape {
   if (!_impact) _impact = readJson<ImpactCoefficientsShape>(IMPACT_PATH);
   return _impact;
+}
+
+/** eGRID grid emission factor (kg CO2e / kWh) used to convert energy saved
+ *  into CO2e avoided. Falls back to the EPA eGRID CAMX (WECC California)
+ *  value if the coefficients file is missing the field. */
+export function gridCo2ePerKwh(): number {
+  const v = loadImpactCoefficients().equipment_energy?.grid_co2e_kg_per_kwh;
+  return typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0.195;
 }
 
 // ----- Convenience: seed data version (for provenance) -----
@@ -214,13 +200,10 @@ export function seedDataVersion(): string {
 export function __resetCaches(): void {
   _protocols = null;
   _reagentMap = null;
-  _protocolReagents = null;
-  _thermalProfiles = null;
   _stability = null;
   _overlapRules = null;
   _equipment = null;
   _equipmentTermMap = null;
-  _protocolEquipmentReqs = null;
   _operators = null;
   _epaCache = null;
   _impact = null;

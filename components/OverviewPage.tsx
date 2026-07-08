@@ -11,10 +11,13 @@ import {
 } from "@/lib/submission";
 import type {
   NarratedCoordination,
-  NarratedSeparation,
   NarratedWeekPlanResult,
   ScheduledTask,
 } from "@/lib/engine/types";
+import {
+  computeSharedPrepSlots,
+  type SharedPrepSlot,
+} from "@/lib/engine/sharedPrep";
 
 type OverviewPageProps = {
   onBack?: () => void;
@@ -65,6 +68,47 @@ export default function OverviewPage({ onBack, onNext }: OverviewPageProps = {})
 
   const plan = data?.plan;
 
+  // The section title promises cards "ranked by hazard-weighted impact", but
+  // the engine emits coordinations in whatever order it built them (reagent
+  // groups, then equipment groups) — it never actually sorts them. Sort here
+  // so a High-impact card can never render below a Medium one: primarily by
+  // the same High/Medium/Low bucket the badge shows, then by the underlying
+  // EPA hazard rank, then by volume saved as a final tiebreak.
+  const rankedCoordinations = useMemo(() => {
+    if (!plan) return [];
+    const bucketRank: Record<ReturnType<typeof bucketImpact>, number> = {
+      High: 2,
+      Medium: 1,
+      Low: 0,
+    };
+    return [...plan.coordinations].sort((a, b) => {
+      const bucketDiff = bucketRank[bucketImpact(b)] - bucketRank[bucketImpact(a)];
+      if (bucketDiff !== 0) return bucketDiff;
+      const hazardDiff = (b.savings.hazard_rank ?? 0) - (a.savings.hazard_rank ?? 0);
+      if (hazardDiff !== 0) return hazardDiff;
+      return (b.savings.volume_ml ?? 0) - (a.savings.volume_ml ?? 0);
+    });
+  }, [plan]);
+
+  // Lets each coordination card show exactly which real, scheduled task
+  // (person + protocol + clock time) it covers, instead of raw task IDs
+  // hidden behind a toggle. See lib/engine/sharedPrep.ts for why the prep
+  // slot itself needs a separate lookup (the scheduler never plans a "prep"
+  // event — only the calendar/export layers stage one).
+  const taskLookup = useMemo(() => {
+    const m = new Map<string, ScheduledTask>();
+    for (const t of plan?.schedule ?? []) m.set(t.task_id, t);
+    return m;
+  }, [plan]);
+  const prepSlots = useMemo(
+    () => computeSharedPrepSlots(plan?.coordinations ?? [], plan?.schedule ?? []),
+    [plan]
+  );
+  const weekStart = useMemo(
+    () => new Date(plan?.week_start_iso ?? Date.now()),
+    [plan]
+  );
+
   return (
     <div className="min-h-screen bg-sand-50 text-forest-900">
       <TopBar onBack={onBack} />
@@ -80,7 +124,7 @@ export default function OverviewPage({ onBack, onNext }: OverviewPageProps = {})
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-sm leading-relaxed text-forest-800/70 md:text-base">
             {plan?.headline_tagline ??
-              "The payoff. Impact summary at the top, then coordination recommendations ranked by hazard-weighted impact, separation warnings, and a visual week grid."}
+              "The payoff. Impact summary at the top, then coordination recommendations ranked by hazard-weighted impact, and a visual week grid."}
           </p>
         </div>
       </section>
@@ -98,21 +142,25 @@ export default function OverviewPage({ onBack, onNext }: OverviewPageProps = {})
               title="Ranked by hazard-weighted impact"
               lede="Each card combines tasks that share a reagent or equipment run within its stability window. Expand to see vendor terms collapse to their normalized group, or the EPA citation behind every hazard call."
             >
-              {plan.coordinations.length === 0 ? (
+              {rankedCoordinations.length === 0 ? (
                 <EmptyCard
                   title="No overlap opportunities this week."
                   body="Your protocols don't share reagents or equipment in compatible windows — nothing to consolidate."
                 />
               ) : (
                 <div className="space-y-4">
-                  {plan.coordinations.map((c) => (
-                    <RecommendationCard key={c.id} coord={c} />
+                  {rankedCoordinations.map((c) => (
+                    <RecommendationCard
+                      key={c.id}
+                      coord={c}
+                      weekStart={weekStart}
+                      taskLookup={taskLookup}
+                      prepSlot={prepSlots.get(c.id)}
+                    />
                   ))}
                 </div>
               )}
             </SectionCard>
-
-            <SeparationsSection separations={plan.separations} />
 
             <SectionCard
               eyebrow="Week outline"
@@ -222,10 +270,16 @@ function ImpactSummarySection({
   const wk = plan.impact.weekly;
   const yr = plan.impact.annualized_if_repeated;
 
+  // `pilot: true` marks a row whose figure rests on documented cost/energy
+  // assumptions (dollars, kWh, CO₂e) rather than a computed physical count.
+  // Item 6: these get a "pilot est." tag so we never overstate precision to
+  // the lab. Physical counts (mL, prep events, run counts, hazardous-disposal
+  // events) stay unlabeled.
   const rows: {
     label: string;
     weekly: string;
     annual: string;
+    pilot?: boolean;
   }[] = [
     {
       label: "Reagent volume saved",
@@ -243,9 +297,22 @@ function ImpactSummarySection({
       annual: `${formatNumber(yr.equipment_runs_saved)}`,
     },
     {
+      label: "Sequencing cost saved",
+      weekly: `$${formatNumber(wk.usd_saved)}`,
+      annual: `$${formatNumber(yr.usd_saved)}`,
+      pilot: true,
+    },
+    {
+      label: "Energy saved",
+      weekly: `${formatNumber(wk.kwh_saved)} kWh`,
+      annual: `${formatNumber(yr.kwh_saved)} kWh`,
+      pilot: true,
+    },
+    {
       label: "CO₂e range",
       weekly: `${wk.estimated_co2e_kg_range[0].toFixed(1)}–${wk.estimated_co2e_kg_range[1].toFixed(1)} kg`,
       annual: `${yr.estimated_co2e_kg_range[0].toFixed(1)}–${yr.estimated_co2e_kg_range[1].toFixed(1)} kg`,
+      pilot: true,
     },
     {
       label: "Hazardous disposal events avoided",
@@ -281,7 +348,17 @@ function ImpactSummarySection({
               key={r.label}
               className="grid grid-cols-[1fr_auto_auto] items-baseline gap-x-6 px-5 py-3 md:px-6"
             >
-              <span className="text-sm text-sand-50/90">{r.label}</span>
+              <span className="text-sm text-sand-50/90">
+                {r.label}
+                {r.pilot && (
+                  <span
+                    className="ml-2 rounded bg-sand-100/15 px-1.5 py-0.5 align-middle text-[9px] font-semibold uppercase tracking-[0.12em] text-sand-100/70"
+                    title="Pilot estimate — rests on documented cost/energy assumptions. Confirm with your lab."
+                  >
+                    pilot est.
+                  </span>
+                )}
+              </span>
               <span className="text-right font-display text-xl font-semibold tabular-nums leading-none md:text-2xl">
                 {r.weekly}
               </span>
@@ -295,6 +372,9 @@ function ImpactSummarySection({
 
       <p className="relative mt-4 text-[11px] text-sand-100/55">
         Annualized column assumes this same week repeats 52×. Weekly is what your lab actually saves Mon–Fri.
+        Rows tagged <span className="font-semibold text-sand-100/75">pilot est.</span> (dollars, kWh, CO₂e) rest on
+        documented cost/energy assumptions — sequencer per-run cost, instrument power draw, and the EPA eGRID
+        grid factor — and should be confirmed with your lab. Physical counts (mL, prep events, runs) are computed.
       </p>
 
       {!plan.narration.generated && plan.narration.fallback_reason && (
@@ -308,7 +388,17 @@ function ImpactSummarySection({
 
 /* ---------- Recommendations ---------- */
 
-function RecommendationCard({ coord }: { coord: NarratedCoordination }) {
+function RecommendationCard({
+  coord,
+  weekStart,
+  taskLookup,
+  prepSlot,
+}: {
+  coord: NarratedCoordination;
+  weekStart: Date;
+  taskLookup: Map<string, ScheduledTask>;
+  prepSlot?: SharedPrepSlot;
+}) {
   const [showRationale, setShowRationale] = useState(false);
   const [showCitations, setShowCitations] = useState(false);
 
@@ -316,16 +406,8 @@ function RecommendationCard({ coord }: { coord: NarratedCoordination }) {
     coord.type === "shared_reagent_prep" ? "moss" : "ocean";
   const stripe = accent === "moss" ? "bg-moss-500" : "bg-ocean-400";
 
-  const impact = bucketImpact(coord);
-  const impactCls =
-    impact === "High"
-      ? "bg-moss-100 text-moss-700"
-      : impact === "Medium"
-      ? "bg-ocean-100 text-ocean-700"
-      : "bg-sand-200 text-clay-600";
-
-  const people = Array.from(new Set(coord.participants.map((p) => p.person)));
   const savingsChips = buildSavingsChips(coord);
+  const breakdown = buildParticipantBreakdown(coord, taskLookup, weekStart);
 
   return (
     <article className="relative overflow-hidden rounded-2xl border border-forest-700/10 bg-white/85 p-5 md:p-6">
@@ -335,11 +417,6 @@ function RecommendationCard({ coord }: { coord: NarratedCoordination }) {
           {coord.prose.headline || coord.recommendation}
         </h4>
         <div className="flex shrink-0 items-center gap-2">
-          <span
-            className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${impactCls}`}
-          >
-            {impact} impact
-          </span>
           {!coord.aligned && (
             <span className="rounded-full bg-clay-400/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-clay-700">
               Advisory
@@ -351,6 +428,35 @@ function RecommendationCard({ coord }: { coord: NarratedCoordination }) {
       {coord.prose.body && (
         <p className="mt-2 text-sm leading-relaxed text-forest-800/80">
           {coord.prose.body}
+        </p>
+      )}
+
+      {/* Equipment-batching recommendations are matched against a hardcoded
+          demo lab catalog (see ChangesToBeMadeForPilot.md §7). The instrument
+          the engine "reserved" may not exist in the real lab, so flag the
+          recommendation as not-yet-validated until per-lab equipment
+          onboarding lands. */}
+      {coord.type === "shared_equipment_run" && (
+        <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-clay-400/30 bg-clay-400/10 px-3 py-2 text-xs leading-relaxed text-clay-700">
+          <svg
+            viewBox="0 0 24 24"
+            className="mt-0.5 h-3.5 w-3.5 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M12 9v4" />
+            <path d="M12 17h.01" />
+            <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+          </svg>
+          <span>
+            Equipment isn&rsquo;t validated against your lab yet — this batch is
+            matched to a demo instrument catalog. Confirm the instrument exists
+            and is shared before relying on this overlap.
+          </span>
         </p>
       )}
 
@@ -367,11 +473,33 @@ function RecommendationCard({ coord }: { coord: NarratedCoordination }) {
         </div>
       )}
 
-      {people.length > 0 && (
-        <p className="mt-3 text-xs text-forest-800/60">
-          <span className="font-semibold text-forest-800/75">Covers:</span>{" "}
-          {people.join(" · ")}
-        </p>
+      {breakdown.length > 0 && (
+        <div className="mt-3 rounded-xl border border-forest-700/10 bg-sand-50/70 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-forest-800/55">
+            {coord.type === "shared_reagent_prep"
+              ? "What gets combined"
+              : "Who's on this run"}
+          </p>
+          {coord.type === "shared_reagent_prep" && prepSlot && (
+            <p className="mt-1.5 text-xs font-semibold text-forest-800/85">
+              Prep together once:{" "}
+              {dayLabel(
+                weekStart,
+                dayIndex(prepSlot.start.toISOString(), weekStart)
+              )}{" "}
+              {formatLocalHm(prepSlot.start.toISOString())}–
+              {formatLocalHm(prepSlot.end.toISOString())}
+            </p>
+          )}
+          <ul className="mt-1.5 space-y-1 text-xs leading-relaxed text-forest-800/70">
+            {breakdown.map((b, i) => (
+              <li key={i}>
+                <span className="font-medium text-forest-800">{b.person}</span>{" "}
+                — {b.protocolLabel}, {b.timesLabel}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
@@ -523,6 +651,12 @@ function buildSavingsChips(coord: NarratedCoordination): string[] {
       `${s.runs_saved} equipment run${s.runs_saved === 1 ? "" : "s"} saved`,
     );
   }
+  if (typeof s.usd_saved === "number" && s.usd_saved > 0) {
+    out.push(`~$${formatNumber(s.usd_saved)} saved (est.)`);
+  }
+  if (typeof s.kwh_saved === "number" && s.kwh_saved > 0) {
+    out.push(`~${formatNumber(s.kwh_saved)} kWh saved (est.)`);
+  }
   if (
     typeof s.hazardous_disposal_events_avoided === "number" &&
     s.hazardous_disposal_events_avoided > 0
@@ -541,6 +675,57 @@ function buildSavingsChips(coord: NarratedCoordination): string[] {
   return out;
 }
 
+interface ParticipantBreakdownLine {
+  person: string;
+  protocolLabel: string;
+  timesLabel: string;
+}
+
+/** Turns a coordination's flat `participants[]` (one entry per contributing
+ *  task — a person can appear more than once, e.g. 3 DNA-extraction runs) into
+ *  one readable line per (person, protocol), joined against the actual
+ *  scheduled time from `plan.schedule` so the card shows real names and
+ *  clock times instead of raw task IDs / overlap-group codes. */
+function buildParticipantBreakdown(
+  coord: NarratedCoordination,
+  taskLookup: Map<string, ScheduledTask>,
+  weekStart: Date
+): ParticipantBreakdownLine[] {
+  const groups = new Map<
+    string,
+    { person: string; protocolLabel: string; times: number[] }
+  >();
+  for (const p of coord.participants) {
+    const task = taskLookup.get(p.task_id);
+    const protocolLabel = task?.protocol_name ?? "this protocol";
+    const key = `${p.person}::${protocolLabel}`;
+    const g = groups.get(key) ?? { person: p.person, protocolLabel, times: [] };
+    if (task) g.times.push(new Date(task.start_iso).getTime());
+    groups.set(key, g);
+  }
+  return Array.from(groups.values()).map((g) => {
+    const uniqueTimes = Array.from(new Set(g.times)).sort((a, b) => a - b);
+    let timesLabel: string;
+    if (uniqueTimes.length === 0) {
+      timesLabel = "not scheduled this week";
+    } else if (uniqueTimes.length === 1) {
+      timesLabel = formatDayTime(uniqueTimes[0], weekStart);
+      if (g.times.length > 1) timesLabel += ` ×${g.times.length}`;
+    } else {
+      const shown = uniqueTimes.slice(0, 2).map((t) => formatDayTime(t, weekStart));
+      timesLabel =
+        shown.join(", ") +
+        (uniqueTimes.length > 2 ? `, +${uniqueTimes.length - 2} more` : "");
+    }
+    return { person: g.person, protocolLabel: g.protocolLabel, timesLabel };
+  });
+}
+
+function formatDayTime(ms: number, weekStart: Date): string {
+  const iso = new Date(ms).toISOString();
+  return `${dayLabel(weekStart, dayIndex(iso, weekStart))} ${formatLocalHm(iso)}`;
+}
+
 function bucketImpact(c: NarratedCoordination): "High" | "Medium" | "Low" {
   const vol = c.savings.volume_ml ?? 0;
   const haz = c.savings.hazardous_disposal_events_avoided ?? 0;
@@ -549,145 +734,13 @@ function bucketImpact(c: NarratedCoordination): "High" | "Medium" | "Low" {
   return "Low";
 }
 
-/* ---------- Separations ---------- */
-
-function SeparationsSection({
-  separations,
-}: {
-  separations: NarratedSeparation[];
-}) {
-  return (
-    <section className="rounded-3xl border border-clay-400/30 bg-gradient-to-br from-clay-400/10 to-sand-100 p-6 shadow-soft md:p-8">
-      <p className="text-[10px] uppercase tracking-[0.25em] text-clay-600">
-        Separation warnings
-      </p>
-      <h3 className="mt-1 font-display text-2xl font-semibold text-clay-700 md:text-3xl">
-        These waste streams must stay apart
-      </h3>
-      <p className="mt-2 max-w-2xl text-sm text-clay-700/80">
-        Incompatible streams are flagged deterministically via an RCRA
-        compatibility matrix. No LLM near safety-relevant decisions.
-      </p>
-      <div className="mt-6 space-y-4">
-        {separations.length === 0 ? (
-          <div className="rounded-2xl border border-clay-400/20 bg-white/80 px-5 py-6 text-center text-sm text-clay-700/85">
-            <p className="font-display text-lg font-semibold text-clay-700">
-              No incompatibility flags this week.
-            </p>
-            <p className="mt-2">
-              The RCRA compatibility matrix didn&rsquo;t surface any conflicts
-              between the protocols you uploaded.
-            </p>
-          </div>
-        ) : (
-          separations.map((s) => <WarningCard key={s.id} sep={s} />)
-        )}
-      </div>
-    </section>
-  );
-}
-
-function WarningCard({ sep }: { sep: NarratedSeparation }) {
-  const sevCls =
-    sep.severity === "critical"
-      ? "bg-clay-500"
-      : sep.severity === "warning"
-      ? "bg-clay-400"
-      : "bg-sand-300";
-  return (
-    <article className="relative overflow-hidden rounded-2xl border border-clay-400/30 bg-white/85 p-5 md:p-6">
-      <div className={`absolute left-0 top-0 h-full w-1.5 ${sevCls}`} />
-      <div className="flex items-start gap-3">
-        <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-clay-500 text-sand-50">
-          <svg
-            viewBox="0 0 24 24"
-            className="h-3.5 w-3.5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M12 9v4" />
-            <path d="M12 17h.01" />
-            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-          </svg>
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <h4 className="font-display text-lg font-semibold text-clay-700">
-              {sep.prose.headline || sep.reason}
-            </h4>
-            <span className="rounded-full bg-clay-400/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-clay-700">
-              {sep.severity}
-            </span>
-          </div>
-          <p className="mt-2 text-sm leading-relaxed text-clay-700/85">
-            {sep.prose.body}
-          </p>
-          {sep.citations.length > 0 && (
-            <div className="mt-3 space-y-2">
-              {sep.citations.map((c, i) => (
-                <div
-                  key={i}
-                  className="rounded-lg border border-clay-400/20 bg-white/70 p-2.5 text-[11px] text-clay-700/85"
-                >
-                  <div className="flex flex-wrap items-baseline gap-2">
-                    <span className="font-mono font-medium">
-                      {c.waste_group}
-                    </span>
-                    {c.is_tri_listed && (
-                      <span
-                        className="rounded bg-clay-400/20 px-1.5 py-0.5 font-mono text-[10px] font-semibold"
-                        title="EPA TRI-listed chemical (cross-verify via the TRI link in the page footer)"
-                      >
-                        TRI listed
-                      </span>
-                    )}
-                    {c.rcra_code && (
-                      <span className="rounded bg-clay-400/20 px-1.5 py-0.5 font-mono text-[10px] font-semibold">
-                        RCRA {c.rcra_code}
-                      </span>
-                    )}
-                  </div>
-                  {c.cas_entries.length > 0 && (
-                    <ul className="mt-1.5 space-y-0.5">
-                      {c.cas_entries.map((cas, j) => (
-                        <li
-                          key={j}
-                          className="break-words [overflow-wrap:anywhere]"
-                        >
-                          <span className="font-mono font-semibold text-clay-700">
-                            CAS {cas.cas}
-                          </span>
-                          {cas.dtxsid && (
-                            <span className="ml-1.5 font-mono text-[10px] text-clay-700/65">
-                              · DTXSID {cas.dtxsid}
-                            </span>
-                          )}
-                          {cas.name && (
-                            <span className="text-clay-700/75"> · {cas.name}</span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </article>
-  );
-}
-
 /* ---------- Stage block grid ---------- */
 
-const FAMILY_TONES: Record<string, "moss" | "ocean" | "sand"> = {
+const FAMILY_TONES: Record<string, "moss" | "ocean" | "sand" | "forest"> = {
   DNA_extraction: "moss",
   PCR: "ocean",
   Bead_cleanup: "sand",
+  Sequencing: "forest",
 };
 
 function StageBlocks({
@@ -772,7 +825,7 @@ function StageBlocks({
       </div>
       <p className="mt-4 text-xs text-forest-800/55">
         Week starts {weekStartLabel}. Tones reflect protocol family — moss =
-        extraction, ocean = PCR, sand = cleanup. Tasks marked &ldquo;shared&rdquo;
+        extraction, ocean = PCR, sand = cleanup, forest = sequencing. Tasks marked &ldquo;shared&rdquo;
         are batched with at least one other person under a coordination above.
       </p>
     </>
@@ -823,6 +876,8 @@ function Block({ task }: { task: ScheduledTask }) {
       ? "bg-moss-200/70 text-moss-700 border-moss-500/40"
       : tone === "ocean"
       ? "bg-ocean-100/80 text-ocean-700 border-ocean-400/40"
+      : tone === "forest"
+      ? "bg-forest-700/15 text-forest-800 border-forest-700/40"
       : "bg-sand-200 text-clay-600 border-clay-400/40";
   const startTime = formatLocalHm(task.start_iso);
   return (
@@ -990,14 +1045,11 @@ export function TopBar({ onBack }: { onBack?: () => void } = {}) {
           <Link
             href="/"
             className="group flex items-center gap-3"
-            aria-label="Green Bench home"
+            aria-label="LabSync home"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-forest-700 text-sand-50">
-              <LeafIcon />
-            </span>
             <div className="leading-tight">
               <p className="font-brand text-xl font-semibold tracking-tight text-forest-800">
-                Green Bench
+                LabSync
               </p>
               <p className="text-[10px] uppercase tracking-[0.2em] text-forest-800/55">
                 schedule for sustainability
@@ -1018,95 +1070,11 @@ export function TopBar({ onBack }: { onBack?: () => void } = {}) {
 
 export function Footer() {
   return (
-    <footer className="border-t border-forest-700/10 bg-white/50 py-10">
-      <div className="mx-auto max-w-5xl space-y-6 px-6">
-        <section>
-          <p className="text-center text-xl font-semibold uppercase tracking-[0.2em] text-forest-700">
-            Verify our data
-          </p>
-          <p className="mx-auto mt-2 max-w-2xl text-center text-xs text-forest-800/60">
-            Every DTXSID, CAS number, TRI flag, and RCRA code on this site
-            links directly into these EPA databases. Cross-check any claim:
-          </p>
-          <ul className="mt-4 flex flex-wrap items-center justify-center gap-2">
-            <li>
-              <a
-                href="https://comptox.epa.gov/dashboard/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border border-forest-700/20 bg-white px-4 py-1.5 text-xs font-medium text-forest-800 transition hover:bg-forest-700 hover:text-sand-50"
-              >
-                <ExternalIcon />
-                Look up a DTXSID or CAS number
-              </a>
-            </li>
-            <li>
-              <a
-                href="https://www.epa.gov/toxics-release-inventory-tri-program/tri-listed-chemicals"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border border-forest-700/20 bg-white px-4 py-1.5 text-xs font-medium text-forest-800 transition hover:bg-forest-700 hover:text-sand-50"
-              >
-                <ExternalIcon />
-                TRI-listed chemicals
-              </a>
-            </li>
-            <li>
-              <a
-                href="https://www.epa.gov/hw/defining-hazardous-waste-listed-characteristic-and-mixed-radiological-wastes"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border border-forest-700/20 bg-white px-4 py-1.5 text-xs font-medium text-forest-800 transition hover:bg-forest-700 hover:text-sand-50"
-              >
-                <ExternalIcon />
-                RCRA waste code definitions
-              </a>
-            </li>
-          </ul>
-        </section>
-
-        <p className="border-t border-forest-700/10 pt-5 text-center text-xs text-forest-800/55">
-          Green Bench · Hazard data grounded in EPA TRI, CompTox &amp; RCRA
-          classifications.
-        </p>
+    <footer className="border-t border-forest-700/10 bg-white/50 py-6">
+      <div className="mx-auto max-w-5xl px-6">
+        <p className="text-center text-xs text-forest-800/55">LabSync</p>
       </div>
     </footer>
-  );
-}
-
-function ExternalIcon() {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 24 24"
-      className="h-3.5 w-3.5 opacity-70"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M14 3h7v7" />
-      <path d="M21 3l-9 9" />
-      <path d="M19 14v6a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1h6" />
-    </svg>
-  );
-}
-
-function LeafIcon() {
-  return (
-    <svg
-      className="h-5 w-5"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M11 20A7 7 0 0 1 4 13c0-4 3-7 7-7h8v8a7 7 0 0 1-7 6z" />
-      <path d="M4 20l8-8" />
-    </svg>
   );
 }
 

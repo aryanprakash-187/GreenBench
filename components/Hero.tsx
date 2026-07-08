@@ -8,22 +8,16 @@ export default function Hero() {
       <HeroBackground />
 
       <div className="relative z-10 mx-auto flex max-w-6xl flex-col items-center">
-        {/* Wordmark on the left, triangle composition on the right */}
-        <div className="flex w-full flex-row items-center justify-center gap-4 sm:gap-6 md:gap-8 lg:gap-10">
-          <h1
-            className="whitespace-nowrap text-left font-semibold uppercase tracking-[0.02em] text-white"
-            style={{
-              fontFamily: "'Space Grotesk', Inter, system-ui, sans-serif",
-              fontSize: "clamp(3.5rem, 11vw, 9rem)",
-              lineHeight: 0.88,
-            }}
-          >
-            Green
-            <br />
-            Bench
-          </h1>
-          <GreenBenchMark />
-        </div>
+        <h1
+          className="text-center font-semibold uppercase tracking-[0.02em] text-white"
+          style={{
+            fontFamily: "'Space Grotesk', Inter, system-ui, sans-serif",
+            fontSize: "clamp(3.5rem, 11vw, 9rem)",
+            lineHeight: 0.88,
+          }}
+        >
+          LabSync
+        </h1>
 
         <p
           className="mt-8 text-2xl italic text-white md:text-3xl"
@@ -32,14 +26,6 @@ export default function Hero() {
           }}
         >
           schedule for sustainability
-        </p>
-
-        <p className="mx-auto mt-10 max-w-2xl text-balance text-center text-[15px] leading-relaxed text-sand-100/90 md:text-base">
-          Welcome to Green Bench, where we merge you and your colleagues&rsquo;
-          lab schedules to increase sustainability. Lab work is becoming
-          increasingly harmful to the environment through its output of
-          hazardous waste and use of energy. Let us help you make your work
-          more efficient while improving the environment.
         </p>
 
         {/* Scroll cue */}
@@ -77,177 +63,6 @@ export default function Hero() {
         />
       </svg>
     </section>
-  );
-}
-
-/* ---------- Brand mark: hazard triangle + rotating globe ---------- */
-
-function GreenBenchMark() {
-  return (
-    <div
-      aria-hidden
-      className="shrink-0 self-center"
-      style={{ height: "clamp(5.25rem, 16.5vw, 13.5rem)" }}
-    >
-      <svg
-        viewBox="42 60 316 285"
-        fill="none"
-        stroke="white"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="h-full w-auto drop-shadow-[0_6px_30px_rgba(255,255,255,0.15)]"
-      >
-        <defs>
-          {/* Radial mask to dim the back half of the globe so meridians feel 3D */}
-          <radialGradient id="gb-globe-face" cx="50%" cy="45%" r="55%">
-            <stop offset="0%" stopColor="white" stopOpacity="0.16" />
-            <stop offset="60%" stopColor="white" stopOpacity="0.06" />
-            <stop offset="100%" stopColor="white" stopOpacity="0" />
-          </radialGradient>
-          {/* Clip mask so continent shapes never spill past the sphere outline */}
-          <clipPath id="gb-globe-clip">
-            <circle cx="200" cy="295" r="25" />
-          </clipPath>
-        </defs>
-
-        {/* Hazard triangle (equilateral, rounded corners) */}
-        <path
-          d="M 183 91 L 65 309 Q 48 340 83 340 L 317 340 Q 352 340 335 309 L 217 91 Q 200 60 183 91 Z"
-          strokeWidth="5"
-        />
-
-        {/* Exclamation-mark stem — teardrop outline (rounded dome + rounded bottom) */}
-        <path
-          d="M 200 260
-             C 220 260, 220 230, 220 200
-             C 220 175, 215 138, 200 138
-             C 185 138, 180 175, 180 200
-             C 180 230, 180 260, 200 260 Z"
-          fill="none"
-          strokeWidth="1.8"
-        />
-
-        {/* Exclamation-mark dot — styled as a small rotating wireframe globe */}
-        <g transform="translate(200 295)">
-          {/* Glow fill behind globe */}
-          <circle r="34" fill="url(#gb-globe-face)" stroke="none" />
-
-          {/* Sphere outline */}
-          <circle r="25" strokeWidth="1.8" />
-
-          {/* Stylized continents — drawn under the wireframe so grid lines overlay them.
-              Clipped to the sphere circle (clip-path uses absolute coords, hence the outer <g>). */}
-          <g clipPath="url(#gb-globe-clip)" transform="translate(-200 -295)">
-            <g
-              transform="translate(200 295) scale(1.136)"
-              fill="white"
-              stroke="none"
-              opacity="0.55"
-            >
-              {/* Americas (N + S, connected) */}
-              <path d="M -15 -11 C -18 -5, -14 1, -12 6 C -14 12, -8 16, -6 11 C -6 6, -3 2, -6 -3 C -3 -8, -9 -14, -15 -11 Z" />
-              {/* Africa */}
-              <path d="M 7 -6 C 4 -2, 6 4, 8 8 C 11 12, 15 8, 13 2 C 16 -2, 11 -8, 7 -6 Z" />
-              {/* Eurasia strip across the top */}
-              <path d="M 2 -14 C 5 -16, 13 -14, 17 -11 C 20 -9, 18 -5, 13 -6 C 7 -5, 3 -7, 1 -10 Z" />
-              {/* Australia */}
-              <circle cx="16" cy="11" r="2.2" />
-            </g>
-          </g>
-
-          {/* Static latitudes */}
-          <ellipse rx="25" ry="8" strokeWidth="0.8" opacity="0.75" />
-          <ellipse rx="20" ry="4.5" cy="-12.5" strokeWidth="0.8" opacity="0.55" />
-          <ellipse rx="20" ry="4.5" cy="12.5" strokeWidth="0.8" opacity="0.55" />
-
-          {/* Polar axis hint */}
-          <line
-            x1="0"
-            y1="-25"
-            x2="0"
-            y2="25"
-            strokeWidth="0.6"
-            opacity="0.4"
-          />
-
-          {/* Rotating meridians — four vertical ellipses whose rx oscillates with
-              staggered phases so the globe reads as spinning */}
-          <g strokeWidth="1" opacity="0.95">
-            <ellipse rx="0" ry="25">
-              <animate
-                attributeName="rx"
-                values="0;25;0;25;0"
-                keyTimes="0;0.25;0.5;0.75;1"
-                dur="5.2s"
-                repeatCount="indefinite"
-              />
-              <animate
-                attributeName="opacity"
-                values="0.25;1;0.25;1;0.25"
-                keyTimes="0;0.25;0.5;0.75;1"
-                dur="5.2s"
-                repeatCount="indefinite"
-              />
-            </ellipse>
-            <ellipse rx="0" ry="25">
-              <animate
-                attributeName="rx"
-                values="0;25;0;25;0"
-                keyTimes="0;0.25;0.5;0.75;1"
-                dur="5.2s"
-                begin="-1.3s"
-                repeatCount="indefinite"
-              />
-              <animate
-                attributeName="opacity"
-                values="0.25;1;0.25;1;0.25"
-                keyTimes="0;0.25;0.5;0.75;1"
-                dur="5.2s"
-                begin="-1.3s"
-                repeatCount="indefinite"
-              />
-            </ellipse>
-            <ellipse rx="0" ry="25">
-              <animate
-                attributeName="rx"
-                values="0;25;0;25;0"
-                keyTimes="0;0.25;0.5;0.75;1"
-                dur="5.2s"
-                begin="-2.6s"
-                repeatCount="indefinite"
-              />
-              <animate
-                attributeName="opacity"
-                values="0.25;1;0.25;1;0.25"
-                keyTimes="0;0.25;0.5;0.75;1"
-                dur="5.2s"
-                begin="-2.6s"
-                repeatCount="indefinite"
-              />
-            </ellipse>
-            <ellipse rx="0" ry="25">
-              <animate
-                attributeName="rx"
-                values="0;25;0;25;0"
-                keyTimes="0;0.25;0.5;0.75;1"
-                dur="5.2s"
-                begin="-3.9s"
-                repeatCount="indefinite"
-              />
-              <animate
-                attributeName="opacity"
-                values="0.25;1;0.25;1;0.25"
-                keyTimes="0;0.25;0.5;0.75;1"
-                dur="5.2s"
-                begin="-3.9s"
-                repeatCount="indefinite"
-              />
-            </ellipse>
-          </g>
-        </g>
-
-      </svg>
-    </div>
   );
 }
 

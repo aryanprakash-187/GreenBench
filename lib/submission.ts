@@ -35,21 +35,19 @@ export type SubmissionPersonInput = {
    *  can pass original VEVENTs through unchanged. May be null when the user
    *  didn't upload a calendar. */
   schedule_ics_text: string | null;
-  /** The matched + enriched protocol for this person.
+  /** The matched + enriched protocols this person uploaded.
    *
-   *  The form deliberately collects ONE protocol upload per person (see
-   *  `SubmissionPersonInput` in `components/HomeForm.tsx`). The shape used to
-   *  be an array, which was a footgun: the rest of the pipeline (engine API,
-   *  exporter) would happily accept multiple, but no UI ever produced more
-   *  than one entry. Narrowing to a single optional value here keeps the
-   *  contract honest. If multi-protocol upload ever ships, switch this back
-   *  to an array AND add the multi-upload control. */
-  protocol: SubmissionProtocolInput | null;
+   *  The form now collects one or more protocol uploads per person (see
+   *  `PersonBlock` in `components/HomeForm.tsx`), each becoming its own engine
+   *  task. Empty array when the person uploaded nothing. Downstream consumers
+   *  read only `name` / `schedule_*` today; the per-protocol detail is kept
+   *  for the submission record and future per-protocol UI. */
+  protocols: SubmissionProtocolInput[];
 };
 
 /* ---------- Top-level submission ----------
  *
- * The shape persists in localStorage under key `greenbench.submission`. It
+ * The shape persists in localStorage under key `labsync.submission`. It
  * carries everything OverviewPage / SchedulesPage need to render a fully
  * data-driven plan and exports — no mocks. The legacy `people` field (with
  * FileStubs) is kept too so older code paths continue to read names.
@@ -68,7 +66,7 @@ export type Submission = {
   plan?: NarratedWeekPlanResult;
 };
 
-export const SUBMISSION_STORAGE_KEY = "greenbench.submission";
+export const SUBMISSION_STORAGE_KEY = "labsync.submission";
 
 export function loadSubmission(): Submission | null {
   if (typeof window === "undefined") return null;

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Hero from "@/components/Hero";
-import HomeForm, { EMPTY_PERSON, type Person } from "@/components/HomeForm";
+import HomeForm, { makeEmptyPerson, type Person } from "@/components/HomeForm";
 import OverviewPage from "@/components/OverviewPage";
 import SchedulesPage from "@/components/SchedulesPage";
 
@@ -11,8 +11,8 @@ type Step = "plan" | "coordinate" | "export";
 export default function Page() {
   const [step, setStep] = useState<Step>("plan");
   const [people, setPeople] = useState<Person[]>(() => [
-    { ...EMPTY_PERSON },
-    { ...EMPTY_PERSON },
+    makeEmptyPerson(),
+    makeEmptyPerson(),
   ]);
 
   useEffect(() => {

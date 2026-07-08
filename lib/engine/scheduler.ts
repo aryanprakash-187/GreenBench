@@ -6,8 +6,10 @@
 // Algorithm:
 //   1. Anchor at week_start_iso. Build per-person free intervals as
 //      [operator_window ∩ ¬busy_ics] across each weekday.
-//   2. Sort tasks by descending coordination potential (tasks involved in
-//      coordinations are placed first so we can align them).
+//      2. Sort tasks by descending hazard rank across the coordinations
+//      they're in (then coordination count), so the higher-disposal-burden
+//      coordination wins when two contend for the same slot and the loser
+//      degrades to an advisory recommendation. See ChangesToBeMadeForPilot.md §1.
 //   3. For each task: enforce intra-person family ordering (extraction <
 //      PCR < cleanup) by requiring all earlier-family tasks owned by the
 //      SAME person to be already-scheduled and ended before the new task
@@ -33,10 +35,21 @@ import type {
 
 const MS_PER_MIN = 60 * 1000;
 const WEEK_DAYS = 7;
+// Every task the user sees must start on a quarter-hour mark (:00/:15/:30/
+// :45) — free-interval and equipment-conflict boundaries otherwise land at
+// arbitrary minutes (e.g. a task ending at 10:07 would let the next one
+// start at 10:07). 15 minutes divides the epoch evenly, so rounding an
+// absolute ms timestamp up to the nearest multiple of GRID_MS always lands
+// on a real quarter-hour with no timezone-dependent arithmetic.
+const GRID_MS = 15 * MS_PER_MIN;
 const FAMILY_ORDER: Record<string, number> = {
   DNA_extraction: 0,
   PCR: 1,
   Bead_cleanup: 2,
+  // Sequencing is the downstream instrument run: it comes after a person's
+  // library-prep cleanup. Two people's sequencing tasks pool onto one run via
+  // the existing shared_equipment_run alignment on the sequencer.
+  Sequencing: 3,
 };
 
 interface EquipmentReservation {
@@ -61,6 +74,16 @@ export function scheduleWeek(
   const weekEnd = weekStart + WEEK_DAYS * 24 * 60 * MS_PER_MIN;
 
   // Per-person free intervals across the whole week, sorted ascending.
+  //
+  // CAVEAT — keyed by name string, not by which `people[]` entry it came
+  // from. If the caller sends two entries with the same `name` (this happens
+  // by design in the UI: a labmate card and a separate sequencing-run card
+  // can share a name — see `SequencingRun` in components/HomeForm.tsx), the
+  // second `.set()` silently overwrites the first entry's calendar. There is
+  // no merge and no warning. This is only safe when both entries carry the
+  // SAME calendar; if they carry different (or one has none), whichever
+  // entry is processed last wins and the other's busy times are silently
+  // discarded.
   const freeByPerson = new Map<string, FreeInterval[]>();
   for (const p of people) {
     freeByPerson.set(p.name, computeFreeIntervals(p, weekStart, weekEnd));
@@ -75,6 +98,21 @@ export function scheduleWeek(
   for (const c of coordinations) {
     for (const part of c.participants) {
       coordWeight.set(part.task_id, (coordWeight.get(part.task_id) ?? 0) + 1);
+    }
+  }
+
+  // task_id → total hazard rank across the coordinations it's in
+  // (ChangesToBeMadeForPilot.md §1). Placing higher-hazard tasks first means
+  // that when two coordinations contend for the same slot/instrument the
+  // higher-disposal-burden one aligns and the loser falls back to an advisory
+  // recommendation (aligned=false) rather than the scheduler picking whichever
+  // it happened to walk into first. This is a priority weight, not a price.
+  const rankByTask = new Map<string, number>();
+  for (const c of coordinations) {
+    const r = c.savings.hazard_rank ?? 0;
+    if (r <= 0) continue;
+    for (const part of c.participants) {
+      rankByTask.set(part.task_id, (rankByTask.get(part.task_id) ?? 0) + r);
     }
   }
 
@@ -99,9 +137,14 @@ export function scheduleWeek(
   const flat: { person: EnginePerson; task: HydratedTask }[] = [];
   for (const p of people) for (const t of p.tasks) flat.push({ person: p, task: t });
 
-  // Sort: (1) higher coord weight first, (2) family order ascending so
-  // dependencies resolve naturally, (3) longer task first as a tiebreaker.
+  // Sort: (1) higher total hazard rank first (so the higher-disposal-burden
+  // coordination wins any slot contention), (2) higher coord weight, (3)
+  // family order ascending so dependencies resolve naturally, (4) longer task
+  // first as a tiebreaker.
   flat.sort((a, b) => {
+    const ra = rankByTask.get(a.task.task_id) ?? 0;
+    const rb = rankByTask.get(b.task.task_id) ?? 0;
+    if (ra !== rb) return rb - ra;
     const wa = coordWeight.get(a.task.task_id) ?? 0;
     const wb = coordWeight.get(b.task.task_id) ?? 0;
     if (wa !== wb) return wb - wa;
@@ -258,9 +301,11 @@ function placeTask(a: PlaceArgs): { start: number; end: number } | null {
     if (!conflict) return { start: peerStart, end: candidateEnd };
   }
 
-  // 2. Greedy walk: earliest free slot that also clears equipment.
+  // 2. Greedy walk: earliest free slot that also clears equipment. Every
+  //    candidate start is snapped up to the next 15-min grid mark so a task
+  //    never starts at an arbitrary minute.
   for (const slot of a.personFree) {
-    const slotStart = Math.max(slot.start, a.earliestStartMs);
+    const slotStart = snapUpToGrid(Math.max(slot.start, a.earliestStartMs));
     if (slotStart + a.durationMs > slot.end) continue;
     if (slotStart + a.durationMs > a.latestEndMs) continue;
 
@@ -274,10 +319,16 @@ function placeTask(a: PlaceArgs): { start: number; end: number } | null {
         a.equipmentPeerTaskIds
       );
       if (!conflict) return { start: candidate, end: candidate + a.durationMs };
-      candidate = conflict.end; // jump past the conflict
+      candidate = snapUpToGrid(conflict.end); // jump past the conflict, staying on-grid
     }
   }
   return null;
+}
+
+/** Rounds an absolute ms timestamp up to the next 15-minute grid mark (e.g.
+ *  10:07 → 10:15; 10:00 stays 10:00). */
+function snapUpToGrid(ms: number): number {
+  return Math.ceil(ms / GRID_MS) * GRID_MS;
 }
 
 function fitsInsideFree(
@@ -317,7 +368,7 @@ function computeFreeIntervals(
   weekStart: number,
   weekEnd: number
 ): FreeInterval[] {
-  // Operator availability (per weekday). Default = 08:00–22:00 if no
+  // Operator availability (per weekday). Default = 08:00–18:00 if no
   // operators row matches. Name comparison is case-insensitive AND
   // diacritic-tolerant so an input person "Jose" matches an operators.csv
   // entry "José" (and vice versa) — without normalization we silently fell
@@ -369,11 +420,12 @@ function pickAvailabilityWindow(
     'availability_sat',
   ] as const;
 
-  // Default for the demo: weekdays 08:00–22:00. operators.csv only has
-  // mon–fri, and weekends are empty → the engine can still place tasks on
-  // weekends if we let it. Keep the simpler default: weekdays only.
+  // Default for the demo: weekdays 08:00–18:00 (a normal bench workday, not
+  // a 14-hour envelope). operators.csv only has mon–fri, and weekends are
+  // empty → the engine can still place tasks on weekends if we let it. Keep
+  // the simpler default: weekdays only.
   const defaultWindow =
-    dow >= 1 && dow <= 5 ? { startMin: 8 * 60, endMin: 22 * 60 } : null;
+    dow >= 1 && dow <= 5 ? { startMin: 8 * 60, endMin: 18 * 60 } : null;
   if (!op) return defaultWindow;
 
   const raw = (op[cols[dow]] ?? '').trim();

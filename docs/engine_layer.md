@@ -183,8 +183,10 @@ Pipeline:
 
 1. **Build per-person free intervals** = operator availability window
    (`operators.csv` row matched by `operator_id` or by name; default
-   weekdays 08:00–22:00) ∩ ¬`busy` events. Free intervals are stored as
-   `{ start_ms, end_ms }` for quick arithmetic.
+   weekdays 08:00–18:00) ∩ ¬`busy` events. Free intervals are stored as
+   `{ start_ms, end_ms }` for quick arithmetic. Every candidate start time is
+   then snapped up to the next 15-minute mark (`GRID_MS` in `scheduler.ts`)
+   so tasks always start on :00/:15/:30/:45.
 2. **Sort tasks** by descending `coordWeight` (tasks involved in any
    coordination go first so they have the best chance of aligning), then by
    `FAMILY_ORDER` ascending (`DNA_extraction < PCR < Bead_cleanup`) so
@@ -291,7 +293,7 @@ The engine accepts `tasks: HydratedTask[]` per person. The form now matches:
 - Each person has ONE `.ics` schedule (their busy calendar).
 - Each person has 1..N protocol entries (`{ file, sampleCount }`), capped at
   4 per person, with an "Add another protocol" button.
-- The submission payload (sessionStorage key `greenbench.submission`) now
+- The submission payload (sessionStorage key `labsync.submission`) now
   shapes as `people: [{ name, schedule, protocols: [{ protocol, sampleCount }] }]`.
 - `PlanTab` renders one card per person with all their protocols listed and
   a "samples total" chip summing across entries.

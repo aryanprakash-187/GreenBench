@@ -1,4 +1,4 @@
-BenchGreen demo lab catalog bundle
+LabSync demo lab catalog bundle
 
 Purpose:
 - equipment.csv: lab equipment catalog with capacity and configurable settings, per README.
@@ -10,7 +10,7 @@ Purpose:
 Why operator windows are broad:
 The README uses operator availability windows plus uploaded busy calendars. For these demos,
 the ICS files contain the meaningful per-person constraints, so operators.csv is kept broad
-(08:00-22:00 workday envelope) to avoid double-blocking valid lab slots.
+(08:00-18:00 workday envelope) to avoid double-blocking valid lab slots.
 
 How to use:
 1. Load equipment.csv and operators.csv into the engine.

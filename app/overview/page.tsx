@@ -1,7 +1,7 @@
 import OverviewPage from "@/components/OverviewPage";
 
 export const metadata = {
-  title: "Overview · Green Bench",
+  title: "Overview · LabSync",
 };
 
 export default function Page() {

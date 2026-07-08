@@ -90,8 +90,8 @@ export async function POST(req: NextRequest) {
   // Workers — percent-encode so any non-ASCII operator name is safe to echo.
   const headers: Record<string, string> = {
     'Content-Type': 'text/calendar; charset=utf-8',
-    'X-Greenbench-Person': encodeURIComponent(body.person_name),
-    'X-Greenbench-Has-Plan-Items': hasAnything ? '1' : '0',
+    'X-Labsync-Person': encodeURIComponent(body.person_name),
+    'X-Labsync-Has-Plan-Items': hasAnything ? '1' : '0',
   };
   if (wantsDownload) {
     headers['Content-Disposition'] = `attachment; filename="${suggestIcsFilename(

@@ -1,4 +1,4 @@
-// Layer 4 of the BenchGreen pipeline: turn a deterministic WeekPlanResult
+// Layer 4 of the LabSync pipeline: turn a deterministic WeekPlanResult
 // into prose for the UI.
 //
 //   engine planWeek()
@@ -33,7 +33,6 @@ import { resolve } from 'node:path';
 
 import { generateJson, llmAvailability, LlmClientError } from './client';
 import {
-  geminiResponseSchemaForNarrate,
   narrationResponseSchema,
   SAVINGS_PHRASE_DIGIT_REGEX,
   type LLMNarrationResponse,
@@ -49,21 +48,26 @@ import type {
   WeekPlanResult,
 } from '../engine/types';
 
-const NARRATOR_MODEL = 'gemini-2.5-flash';
+// Claude Sonnet 4.6 (ChangesToBeMadeForPilot.md §8).
+const NARRATOR_MODEL = 'claude-sonnet-4-6';
 // Narration produces a long structured response (one prose object per
 // coordination AND separation) so it consistently runs longer than the
 // matcher's single-object call. 25 s is the demo's tolerance ceiling.
 const NARRATOR_TIMEOUT_MS = 25_000;
 const NARRATOR_TEMPERATURE = 0.4;
 
-const HEADLINE_MAX = 90;
+// Keep these in sync with lib/llm/schemas.ts (the zod limit there is what
+// the LLM is held to; this file just re-clamps to be safe). Bumped from 90
+// so the engine's full deterministic recommendation can pass through without
+// the trailing "…" the card UI was showing.
+const HEADLINE_MAX = 200;
 const BODY_MAX = 280;
-const SAVINGS_PHRASE_MAX = 90;
+const SAVINGS_PHRASE_MAX = 120;
 
 // ----- Public API -----
 
 export interface NarrateOptions {
-  /** Skip Gemini entirely (used by tests and the offline demo path). */
+  /** Skip the LLM entirely (used by tests and the offline demo path). */
   disable_llm?: boolean;
 }
 
@@ -74,7 +78,7 @@ export async function narrateWeekPlan(
   opts: NarrateOptions = {}
 ): Promise<NarratedWeekPlanResult> {
   // 0. Edge case: no coordinations and no separations. Nothing for the LLM
-  //    to write; emit a tagline and return early. Saves a Gemini round trip
+  //    to write; emit a tagline and return early. Saves an LLM round trip
   //    on the rare empty-week case.
   if (
     result.coordinations.length === 0 &&
@@ -92,7 +96,7 @@ export async function narrateWeekPlan(
     return wrapFallback(result, avail.reason);
   }
 
-  // 2. Try Gemini.
+  // 2. Try the LLM.
   try {
     const response = await runLlmTier(result);
     return wrapGenerated(result, response);
@@ -125,7 +129,6 @@ async function runLlmTier(result: WeekPlanResult): Promise<LLMNarrationResponse>
 
   return generateJson({
     prompt: `${prompt}\n\n---\n\n${userBlock}`,
-    responseSchema: geminiResponseSchemaForNarrate(),
     validate: narrationResponseSchema(
       result.coordinations.length,
       result.separations.length
@@ -306,6 +309,9 @@ function deterministicHeadlineTagline(result: WeekPlanResult): string {
       `${w.equipment_runs_saved} equipment ${plural(w.equipment_runs_saved, 'run')} saved`
     );
   }
+  if (w.usd_saved > 0) {
+    parts.push(`~$${Math.round(w.usd_saved).toLocaleString()} saved (est.)`);
+  }
   if (w.hazardous_disposal_events_avoided > 0) {
     parts.push(
       `${w.hazardous_disposal_events_avoided} hazardous disposal ${plural(w.hazardous_disposal_events_avoided, 'event')} avoided`
@@ -389,6 +395,12 @@ function formatSavingsPhrase(c: Coordination): string {
   }
   if (s.runs_saved && s.runs_saved > 0) {
     bits.push(`${s.runs_saved} ${plural(s.runs_saved, 'run')}`);
+  }
+  if (s.usd_saved && s.usd_saved > 0) {
+    bits.push(`~$${Math.round(s.usd_saved).toLocaleString()} (est.)`);
+  }
+  if (s.kwh_saved && s.kwh_saved > 0) {
+    bits.push(`~${s.kwh_saved} kWh (est.)`);
   }
   if (s.prep_events_saved && s.prep_events_saved > 0) {
     bits.push(

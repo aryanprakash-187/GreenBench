@@ -1,8 +1,8 @@
-# Green Bench
+# LabSync
 
 A professional web app that merges lab schedules to increase sustainability.
 
-Front-end for **BenchGreen Copilot** (see the full product spec above this line in the main README). The website intakes a planner's name, up to three lab protocols, and three `.ics` calendar files. On submit it navigates to a three-tab output — **Plan → Coordinate → Export** — matching the UI flow described in the product spec.
+Front-end for **LabSync** (see the full product spec above this line in the main README). The website intakes a planner's name, up to three lab protocols, and three `.ics` calendar files. On submit it navigates to a three-tab output — **Plan → Coordinate → Export** — matching the UI flow described in the product spec.
 
 ## Stack
 
@@ -22,7 +22,7 @@ Then open [http://localhost:3000](http://localhost:3000).
 
 ## Pages
 
-- `/` — Landing hero (`Green Bench` title, *schedule for sustainability* subtitle, welcome copy) with snap-scroll into the home form (name, 3× Lab Protocol uploads, 3× Schedule `.ics` uploads, Submit).
+- `/` — Landing hero (`LabSync` title, *schedule for sustainability* subtitle) with snap-scroll into the home form (name, 3× Lab Protocol uploads, 3× Schedule `.ics` uploads, Submit).
 - `/results` — Tabbed output: **Plan** (parsed inputs + week outline), **Coordinate** (impact summary, recommendation cards with vendor-term normalization and EPA citations, separation warnings), **Export** (per-operator `.ics` downloads with calendar preview).
 
 ## Structure
