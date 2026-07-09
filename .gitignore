@@ -19,3 +19,6 @@ build/
 
 # Local PDFs (e.g. DATA_OWNER_README.md.pdf)
 *.pdf
+
+# Vercel
+.vercel
