@@ -40,8 +40,10 @@ export interface WeekOption {
 export function buildWeekOptions(count: number, now: Date = new Date()): WeekOption[] {
   const firstMondayIso = nextMondayLocalIso(now);
   const firstMonday = new Date(firstMondayIso);
+  // Pin locale — `undefined` uses the runtime default, so Node (SSR) and the
+  // browser can disagree (e.g. "Jul 13" vs "13 Jul") and trip a hydration error.
   const fmt = (d: Date) =>
-    d.toLocaleDateString(undefined, {
+    d.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       timeZone: "UTC",
@@ -50,7 +52,7 @@ export function buildWeekOptions(count: number, now: Date = new Date()): WeekOpt
   for (let i = 0; i < count; i++) {
     const start = new Date(firstMonday.getTime() + i * 7 * DAY_MS);
     const end = new Date(start.getTime() + 6 * DAY_MS);
-    const yearSuffix = end.toLocaleDateString(undefined, {
+    const yearSuffix = end.toLocaleDateString("en-US", {
       year: "numeric",
       timeZone: "UTC",
     });

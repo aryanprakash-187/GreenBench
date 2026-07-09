@@ -776,7 +776,7 @@ function StageBlocks({
     .map((n) => n?.trim() || "")
     .filter((n, i, arr) => n.length > 0 && arr.indexOf(n) === i);
 
-  const weekStartLabel = weekStart.toLocaleDateString(undefined, {
+  const weekStartLabel = weekStart.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -931,7 +931,7 @@ function dayLabel(weekStart: Date, offset: number): string {
     )
   );
   ws.setUTCDate(ws.getUTCDate() + offset);
-  return ws.toLocaleDateString(undefined, { weekday: "short", timeZone: "UTC" });
+  return ws.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
 }
 
 function formatLocalHm(iso: string): string {

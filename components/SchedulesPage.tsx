@@ -456,7 +456,7 @@ function describePersonEvents(
     rows.push({
       key: `task__${t.task_id}`,
       title: t.protocol_name,
-      day: start.toLocaleDateString(undefined, { weekday: "short", timeZone: "UTC" }),
+      day: start.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" }),
       start: formatLocalHm(start),
       end: formatLocalHm(end),
       durationMin: Math.max(
@@ -498,7 +498,7 @@ function describePersonEvents(
     rows.push({
       key: `coord__${coord.id}__${personName}`,
       title: `Shared prep — ${groupLabel}`,
-      day: start.toLocaleDateString(undefined, { weekday: "short", timeZone: "UTC" }),
+      day: start.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" }),
       start: formatLocalHm(start),
       end: formatLocalHm(end),
       durationMin: SHARED_PREP_DEFAULT_DURATION_MIN,
