@@ -22,9 +22,10 @@ import {
 type OverviewPageProps = {
   onBack?: () => void;
   onNext?: () => void;
+  onReset?: () => void;
 };
 
-export default function OverviewPage({ onBack, onNext }: OverviewPageProps = {}) {
+export default function OverviewPage({ onBack, onNext, onReset }: OverviewPageProps = {}) {
   const router = useRouter();
   const [data, setData] = useState<Submission | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ok" | "missing">(
@@ -111,7 +112,7 @@ export default function OverviewPage({ onBack, onNext }: OverviewPageProps = {})
 
   return (
     <div className="min-h-screen bg-sand-50 text-forest-900">
-      <TopBar onBack={onBack} />
+      <TopBar onBack={onBack} onReset={onReset} />
 
       {/* Centered title hero */}
       <section className="border-b border-forest-700/10 bg-white/50">
@@ -1016,7 +1017,12 @@ export function SectionCard({
 
 /* ---------- Top bar + footer ---------- */
 
-export function TopBar({ onBack }: { onBack?: () => void } = {}) {
+export function TopBar({
+  onBack,
+  onReset,
+}: { onBack?: () => void; onReset?: () => void } = {}) {
+  const newPlanClassName =
+    "rounded-full border border-forest-700/20 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-forest-800 transition hover:bg-forest-700 hover:text-sand-50";
   return (
     <header className="border-b border-forest-700/10 bg-sand-50/90 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
@@ -1042,27 +1048,52 @@ export function TopBar({ onBack }: { onBack?: () => void } = {}) {
               </svg>
             </button>
           )}
-          <Link
-            href="/"
-            className="group flex items-center gap-3"
-            aria-label="LabSync home"
-          >
-            <div className="leading-tight">
-              <p className="font-brand text-xl font-semibold tracking-tight text-forest-800">
-                LabSync
-              </p>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-forest-800/55">
-                schedule for sustainability
-              </p>
-            </div>
-          </Link>
+          {onReset ? (
+            <button
+              type="button"
+              onClick={onReset}
+              className="group flex items-center gap-3"
+              aria-label="LabSync home"
+            >
+              <div className="leading-tight text-left">
+                <p className="font-brand text-xl font-semibold tracking-tight text-forest-800">
+                  LabSync
+                </p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-forest-800/55">
+                  schedule for sustainability
+                </p>
+              </div>
+            </button>
+          ) : (
+            <Link
+              href="/"
+              className="group flex items-center gap-3"
+              aria-label="LabSync home"
+            >
+              <div className="leading-tight">
+                <p className="font-brand text-xl font-semibold tracking-tight text-forest-800">
+                  LabSync
+                </p>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-forest-800/55">
+                  schedule for sustainability
+                </p>
+              </div>
+            </Link>
+          )}
         </div>
-        <Link
-          href="/"
-          className="rounded-full border border-forest-700/20 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.2em] text-forest-800 transition hover:bg-forest-700 hover:text-sand-50"
-        >
-          ← New plan
-        </Link>
+        {onReset ? (
+          <button
+            type="button"
+            onClick={onReset}
+            className={newPlanClassName}
+          >
+            ← New plan
+          </button>
+        ) : (
+          <Link href="/" className={newPlanClassName}>
+            ← New plan
+          </Link>
+        )}
       </div>
     </header>
   );

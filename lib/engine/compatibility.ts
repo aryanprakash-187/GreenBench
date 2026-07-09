@@ -126,12 +126,7 @@ function citationForGroup(
 ) {
   const entry = epa[group];
   if (!entry) return null;
-  const casEntries: {
-    cas: string;
-    name?: string;
-    role?: string;
-    dtxsid?: string;
-  }[] = [];
+  const casEntries: { cas: string; name?: string; role?: string; dtxsid?: string }[] = [];
   for (const item of entry.cas_numbers_involved ?? []) {
     if (typeof item === 'string') {
       if (item.trim()) casEntries.push({ cas: item.trim() });
