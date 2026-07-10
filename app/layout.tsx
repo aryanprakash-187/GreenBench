@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "LabSync — Schedule for Sustainability",
+  title: "LabSync — AI powered sustainable experiment scheduling",
   description:
     "LabSync merges lab schedules to reduce reagent waste, hazardous disposal, and energy use. A scheduling copilot for sustainable wet labs.",
 };
