@@ -25,7 +25,7 @@ export default function Hero() {
             fontFamily: "'Space Grotesk', Inter, system-ui, sans-serif",
           }}
         >
-          AI powered sustainable experiment scheduling
+          AI-powered sustainable experiment scheduling
         </p>
 
         {/* Scroll cue */}

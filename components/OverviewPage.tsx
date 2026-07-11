@@ -1060,7 +1060,7 @@ export function TopBar({
                   LabSync
                 </p>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-forest-800/55">
-                  AI powered sustainable experiment scheduling
+                  AI-powered sustainable experiment scheduling
                 </p>
               </div>
             </button>
@@ -1075,7 +1075,7 @@ export function TopBar({
                   LabSync
                 </p>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-forest-800/55">
-                  AI powered sustainable experiment scheduling
+                  AI-powered sustainable experiment scheduling
                 </p>
               </div>
             </Link>
